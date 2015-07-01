@@ -1,0 +1,6 @@
+"AddonInfo"
+{
+	"name" "Magnet Dipole Tool"
+	"author_name" "DVD"
+	"info" "Turns/Creates a Magnet Dipole"
+}
