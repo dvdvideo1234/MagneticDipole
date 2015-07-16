@@ -21,19 +21,22 @@ When the two poles are insanely small, that they can be represented as a single 
 
 SUPPORTS WIRE ! 
 
-Q: What is this thing really for ?
-A: This is a tool that can turn entities to a real magnets with south and north pole,
-   not like the crappy Magnetise tool.
-
-Q: It won't spawn dude, help ! 
-A: Emm, Use right click to select a model filter 
-
-Q: What are those OBB Offsets? 
-A: Local vector defining the positions of the poles relative to the OBB centre. 
-
-Q: I get the other things, but what is that search radius all about? 
-A: When this thing is greater than 0, you have active magnet, which means that it is searching for other SENTs of the same class and calculating some forces on its poles, set this to 0 to get a passive ( non-searching magnet dipole). 
-Beware, that the active dipoles will still find the passive AND active ones IF THEY ARE WITHIN their search radius, dependant by their own data. 
+<br>Q: What is this thing really for ?
+<br>A: This is a tool that can turn entities to a real magnets with south and north pole,
+<br>   not like the crappy Magnetise tool.
+<br>
+<br>Q: It won't spawn dude, help ! 
+<br>A: Emm, Use right click to select a model filter 
+<br>
+<br>Q: What are those OBB Offsets? 
+<br>A: Local vector defining the positions of the poles relative to the OBB centre. 
+<br>
+<br>Q: I get the other things, but what is that search radius all about? 
+<br>A: When this thing is greater than 0, you have active magnet, which means that it is searching
+<br>   for other SENTs of the same class and calculating some forces on its poles,
+<br>   set this to 0 to get a passive ( non-searching magnet dipole). 
+<br>N: Beware, that the active dipoles will still find the passive AND active ones
+<br>   IF THEY ARE WITHIN their search radius, dependant by their own data. 
 
 HUD Color Legend:
 
