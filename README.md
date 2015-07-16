@@ -1,5 +1,16 @@
 MagnetDipole
 ===============
+
+<br>Copyright 2015 ME !
+
+<br>IF YOU HAPPEN TO FIND REUPLOADS WITH DIFFERENT ORIGIN REPORT THEM TO ME IMMIDEATELY !!! 
+
+![MagnetDipole](https://raw.githubusercontent.com/dvdvideo1234/TrackAssemblyTool/master/screenshot.jpg)
+
+<br>
+<br> On the Steam WS: http://steamcommunity.com/sharedfiles/filedetails/?id=287012681
+<br>
+
 This is a tool that can turn entities to a real magnets with south and north pole, not like the crappy Magnetise tool.
 
 HUD Color Legend:
