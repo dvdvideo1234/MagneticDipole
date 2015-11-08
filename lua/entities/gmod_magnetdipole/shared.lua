@@ -86,9 +86,9 @@ function ENT:GetDampVel()
 end
 
 function ENT:SetDampVel(nDamp)
-  local Damp = tonumber(nDamp) or 0
-  if(Damp and Damp > 0) then
-    self.DampVel = Damp
+  local nDamp = tonumber(nDamp) or 0
+  if(nDamp and nDamp > 0) then
+    self.DampVel = nDamp
   end
 end
 
@@ -97,9 +97,9 @@ function ENT:GetDampRot()
 end
 
 function ENT:SetDampRot(nDamp)
-  local Damp = tonumber(nDamp) or 0
-  if(Damp and Damp > 0) then
-    self.DampRot = Damp
+  local nDamp = tonumber(nDamp) or 0
+  if(nDamp and nDamp > 0) then
+    self.DampRot = nDamp
   end
 end
 
