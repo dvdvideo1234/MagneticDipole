@@ -31,6 +31,7 @@ TOOL.ClientConVar =
   [ "searchrad" ] = "0"   ,
   [ "strength" ]  = "2000",   -- Magnet Strength
   [ "property" ]  = "0"   ,
+  [ "matercfg" ]  = "0"   ,
   [ "dampvel" ]   = "100" ,
   [ "damprot" ]   = "100" ,
   [ "enghost" ]   = "1"   ,
@@ -46,9 +47,48 @@ TOOL.ClientConVar =
 }
 
 if CLIENT then
-  language.Add( "tool."..gsFileName..".name", gsMeanName )
-  language.Add( "tool."..gsFileName..".desc", "Makes an entity a "..gsMeanName )
-  language.Add( "tool."..gsFileName..".0"   , "Left Click apply, Right to copy, Reload to remove" )
+  TOOL.Information = {
+    { name = "info",  stage = 1   },
+    { name = "left"         },
+    { name = "right"        },
+    { name = "reload"       }
+  }
+  language.Add( "tool."..gsFileName..".left"         , "Creates a magnet dipole")
+  language.Add( "tool."..gsFileName..".right"        , "Dipole copy/Prop filter set/World filter clear")
+  language.Add( "tool."..gsFileName..".reload"       , "Removes a magnet dipole")
+  language.Add( "tool."..gsFileName..".name"         , gsMeanName )
+  language.Add( "tool."..gsFileName..".desc"         , "Makes an entity a "..gsMeanName )
+  language.Add( "tool."..gsFileName..".0"            , "Left Click apply, Right to copy, Reload to remove" )
+  language.Add( "tool."..gsFileName..".strength_con" , "Dipole Strength:")
+  language.Add( "tool."..gsFileName..".strength"     , "Defines how powerful is the magnet dipole")
+  language.Add( "tool."..gsFileName..".dampvel_con"  , "Linear damping:")
+  language.Add( "tool."..gsFileName..".dampvel"      , "Defines how much damping the dipole will have for linear velocity")
+  language.Add( "tool."..gsFileName..".damprot_con"  , "Angular damping:")
+  language.Add( "tool."..gsFileName..".damprot"      , "Defines how much damping the dipole will have for angular velocity")
+  language.Add( "tool."..gsFileName..".length_con"   , "Pole length:")
+  language.Add( "tool."..gsFileName..".length"       , "Defines how far apart the poles are fron the center")
+  language.Add( "tool."..gsFileName..".searchrad_con", "Search radius:")
+  language.Add( "tool."..gsFileName..".searchrad"    , "Defines the radius of the sphere the dipole will search in")
+  language.Add( "tool."..gsFileName..".offx_con"     , "OBB Offset X:")
+  language.Add( "tool."..gsFileName..".offx"         , "The local magnitude pole offset X")
+  language.Add( "tool."..gsFileName..".offy_con"     , "OBB Offset Y:")
+  language.Add( "tool."..gsFileName..".offy"         , "The local magnitude pole offset Y")
+  language.Add( "tool."..gsFileName..".offz_con"     , "OBB Offset Z:")
+  language.Add( "tool."..gsFileName..".offz"         , "The local magnitude pole offset Y")
+  language.Add( "tool."..gsFileName..".crossiz_con"  , "Crosshair size:")
+  language.Add( "tool."..gsFileName..".crossiz"      , "Defines hod big the crosshair is on aiming anywhere")
+  language.Add( "tool."..gsFileName..".key_con"      , "Key to start on:")
+  language.Add( "tool."..gsFileName..".key"          , "Defines the numpad key to be use for starting the dipole")
+  language.Add( "tool."..gsFileName..".matercfg_con" , "Enable material config")
+  language.Add( "tool."..gsFileName..".matercfg"     , "Enables material configoration of the serface to be used on iteraction")
+  language.Add( "tool."..gsFileName..".itother_con"  , "Enable para/dia magnetism")
+  language.Add( "tool."..gsFileName..".itother"      , "Enables magnet dipole iteraction with normal props")
+  language.Add( "tool."..gsFileName..".enghost_con"  , "Enable ghosting")
+  language.Add( "tool."..gsFileName..".enghost"      , "Enables drawing the ghosted dipole to assist you where spawned")
+  language.Add( "tool."..gsFileName..".advise_con"   , "Enable N/S Advisor")
+  language.Add( "tool."..gsFileName..".advise"       , "Enables the composition of lines and cirlcles drawing the dipole state")
+  language.Add( "tool."..gsFileName..".property_con" , "Enable baloon properties")
+  language.Add( "tool."..gsFileName..".property"     , "Enables drawing a baloon containing addotional dipole information")
   language.Add( "Undone."..gsFileName       , "Undone "..gsMeanName )
   language.Add( "Cleanup."..gsFileName      , gsMeanName )
   language.Add( "Cleaned."..gsFileName      , "Cleaned up "..gsMeanName )
@@ -68,22 +108,9 @@ if SERVER then
     numpad.Remove(KeyOn);
   end
 
-  function MakeMagnetDipole(ply      ,
-                            pos      ,
-                            ang      ,
-                            key      ,
-                            model    ,
-                            strength ,
-                            dampvel  ,
-                            damprot  ,
-                            itother  ,
-                            searchrad,
-                            length   ,
-                            offx     ,
-                            offy     ,
-                            offz     ,
-                            advise   ,
-                            property)
+  function MakeMagnetDipole(ply      , pos      , ang      , key      , model    ,
+                            strength , dampvel  , damprot  , itother  , searchrad,
+                            length   , offx     , offy     , offz     , advise   , property)
     if (not ply:CheckLimit(gsFileMany)) then
       return false
     end
@@ -99,17 +126,9 @@ if SERVER then
         seMag:SetNotSolid( false );
         seMag:SetPos(pos)
         seMag:SetAngles(ang)
-        seMag:Setup(strength ,
-                    dampvel  ,
-                    damprot  ,
-                    itother  ,
-                    searchrad,
-                    length   ,
-                    offx     ,
-                    offy     ,
-                    offz     ,
-                    advise   ,
-                    property)
+        seMag:Setup(strength , dampvel  , damprot  , itother  ,
+                    searchrad, length   , offx     , offy     ,
+                    offz     , advise   , property)
         seMag:Spawn()
         seMag:SetPlayer(ply)
         seMag:Activate()
@@ -149,6 +168,10 @@ local function PrintNotify(plClient,sText,sNotifType)
   end
 end
 
+function TOOL:GetMeterialConfig()
+  return ((self:GetClientNumber("matercfg") ~= 0) or false)
+end
+
 function TOOL:GetModel()
   return (MagnetDipoleModel(string.lower(self:GetClientInfo("model"))) or "null")
 end
@@ -166,11 +189,11 @@ function TOOL:GetKey()
 end
 
 function TOOL:GetEnAdvisor()
-  return ((self:GetClientNumber("advise") ~= 0 ) or false)
+  return ((self:GetClientNumber("advise") ~= 0) or false)
 end
 
 function TOOL:GetEnProperty()
-  return ((self:GetClientNumber("property") ~= 0 ) or false)
+  return ((self:GetClientNumber("property") ~= 0) or false)
 end
 
 function TOOL:GetDampVel()
@@ -182,11 +205,11 @@ function TOOL:GetDampRot()
 end
 
 function TOOL:GetIteractOthers()
-  return ((self:GetClientNumber("itother") ~= 0 ) or false)
+  return ((self:GetClientNumber("itother") ~= 0) or false)
 end
 
 function TOOL:GetEnGhost()
-  return ((self:GetClientNumber("enghost") ~= 0 ) or false)
+  return ((self:GetClientNumber("enghost") ~= 0) or false)
 end
 
 function TOOL:GetPoleLength(oTrace, nDiv)
@@ -247,6 +270,7 @@ function TOOL:LeftClick(tr)
   local property  = self:GetEnProperty()
   local strength  = self:GetStrength()
   local searchrad = self:GetSearchRadius()
+  local matercfg  = self:GetMeterialConfig()
   if(tr.HitWorld and
      model ~= "null") then
     -- print("Spawn it on World...")
@@ -268,7 +292,7 @@ function TOOL:LeftClick(tr)
                                    offy     ,
                                    offz     ,
                                    advise   ,
-                                   property)
+                                   property , matercfg)
     if(seMag) then
       local vBBMin = seMag:OBBMins()
       local vPos = Vector(tr.HitPos[1],
@@ -305,7 +329,7 @@ function TOOL:LeftClick(tr)
                   offy     ,
                   offz     ,
                   advise   ,
-                  property)
+                  property , matercfg)
       return true
     elseif(trClass == "prop_physics" and
           (model == "null" or model == trModel)
@@ -328,7 +352,7 @@ function TOOL:LeftClick(tr)
                                      offy     ,
                                      offz     ,
                                      advise   ,
-                                     property )
+                                     property , matercfg)
       if(seMag) then
         trEnt:Remove()
         ply:ConCommand(gsFilePrefix.."model " ..trModel.." \n")
@@ -356,18 +380,20 @@ function TOOL:RightClick(tr)
     local trModel = trEnt:GetModel()
     local trClass = trEnt:GetClass()
     if(trClass == gsFileClass) then
-      local PolDir = trEnt:GetPoleDirectionLocal()
-      local ItrOth = trEnt:GetIteractOthers()
+      local poledir  = trEnt:GetPoleDirectionLocal()
+      local itother  = trEnt:GetIteractOthers()
+      local matercfg = trEnt:GetMeterialConfig()
       ply:ConCommand(gsFilePrefix.."model     "..trModel.." \n")
       ply:ConCommand(gsFilePrefix.."strength  "..trEnt:GetStrength().." \n")
       ply:ConCommand(gsFilePrefix.."dampvel   "..trEnt:GetDampVel().." \n")
       ply:ConCommand(gsFilePrefix.."damprot   "..trEnt:GetDampRot().." \n")
-      ply:ConCommand(gsFilePrefix.."itother   "..((ItrOth and 1) or 0).." \n")
+      ply:ConCommand(gsFilePrefix.."itother   "..((itother and 1) or 0).." \n")
+      ply:ConCommand(gsFilePrefix.."matercfg  "..((matercfg and 1) or 0).." \n")
       ply:ConCommand(gsFilePrefix.."searchrad "..trEnt:GetSearchRadius().." \n")
       ply:ConCommand(gsFilePrefix.."length    "..trEnt:GetPoleLength().." \n")
-      ply:ConCommand(gsFilePrefix.."offx      "..PolDir[1].." \n")
-      ply:ConCommand(gsFilePrefix.."offy      "..PolDir[2].." \n")
-      ply:ConCommand(gsFilePrefix.."offz      "..PolDir[3].." \n")
+      ply:ConCommand(gsFilePrefix.."offx      "..poledir[1].." \n")
+      ply:ConCommand(gsFilePrefix.."offy      "..poledir[2].." \n")
+      ply:ConCommand(gsFilePrefix.."offz      "..poledir[3].." \n")
       PrintNotify(ply,"Settings copied !","GENERIC")
       return true
     elseif(trClass == "prop_physics") then
@@ -389,11 +415,7 @@ function TOOL:Reload(tr)
   if(not tr) then return false end
   local trEnt = GetTracePhys(tr)
   if(not trEnt) then return false end
-  if(trEnt:GetClass() == gsFileClass) then
-     -- Print(trEnt:GetTable(),"ENT")
-     trEnt:Remove()
-     return true
-  end
+  if(trEnt:GetClass() == gsFileClass) then trEnt:Remove(); return true end
   return false
 end
 
@@ -524,92 +546,49 @@ function TOOL:DrawHUD()
   surface.DrawLine(x + crsx, y - crsx,  x - crsx, y + crsx)
 end
 
+local ConVarList = TOOL:BuildConVarList()
 function TOOL.BuildCPanel( CPanel )
-  CPanel:AddControl( "Header", {
-            Text         = "#tool."..gsFileName..".name",
-            Description  = "#tool."..gsFileName..".desc" })
+  -- https://wiki.garrysmod.com/page/Category:DForm
+  local pItem -- pItem is the current panel created
+          CPanel:SetName(language.GetPhrase("tool."..gsToolNameL..".name"))
+  pItem = CPanel:Help   (language.GetPhrase("tool."..gsToolNameL..".desc"))
 
-  CPanel:AddControl("Slider", {
-            Label   = "Dipole Strength:",
-            Type    = "float",
-            Min     = 1,
-            Max     = gnMaxStrength,
-            Command = gsFilePrefix.."strength"})
+  pItem = CPanel:AddControl( "ComboBox",{
+            MenuButton = 1,
+            Folder     = gsToolNameL,
+            Options    = {["#Default"] = ConVarList},
+            CVars      = table.GetKeys(ConVarList)})
 
-  CPanel:AddControl("Slider", {
-            Label   = "Linear damping:",
-            Type    = "float",
-            Min     = 1,
-            Max     = gnMaxDampVel,
-            Command = gsFilePrefix.."dampvel"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Angular damping:",
-            Type    = "float",
-            Min     = 1,
-            Max     = gnMaxDampRot,
-            Command = gsFilePrefix.."damprot"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Pole Length",
-            Type    = "float",
-            Min     = 0,
-            Max     = gnMaxPoleLen,
-            Command = gsFilePrefix.."length"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Search radius:",
-            Type    = "float",
-            Min     = 0,
-            Max     = gnMaxSearchRad,
-            Command = gsFilePrefix.."searchrad"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Pole Local OBB Offset X:",
-            Type    = "float",
-            Min     = -gnMaxPoleOffs,
-            Max     =  gnMaxPoleOffs,
-            Command = gsFilePrefix.."offx"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Pole Local OBB Offset Y:",
-            Type    = "float",
-            Min     = -gnMaxPoleOffs,
-            Max     =  gnMaxPoleOffs,
-            Command = gsFilePrefix.."offy"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Pole Local OBB Offset Z:",
-            Type    = "float",
-            Min     = -gnMaxPoleOffs,
-            Max     =  gnMaxPoleOffs,
-            Command = gsFilePrefix.."offz"})
-
-  CPanel:AddControl("Slider", {
-            Label   = "Crosshair size:",
-            Type    = "float",
-            Min     = 0,
-            Max     = gnMaxCrossSiz,
-            Command = gsFilePrefix.."crossiz"})
-
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".strength_con"), gsFilePrefix.."strength", 1, gnMaxStrength, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".strength"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".dampvel_con"), gsFilePrefix.."dampvel", 1, gnMaxDampVel, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".dampvel"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".damprot_con"), gsFilePrefix.."damprot", 1, gnMaxDampRot, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".damprot"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".length_con"), gsFilePrefix.."length", 0, gnMaxPoleLen, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".length"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".searchrad_con"), gsFilePrefix.."searchrad", 0, gnMaxSearchRad, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".searchrad"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".offx_con"), gsFilePrefix.."offx", -gnMaxPoleOffs, gnMaxPoleOffs, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".offx"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".offy_con"), gsFilePrefix.."offy", -gnMaxPoleOffs, gnMaxPoleOffs, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".offy"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".offz_con"), gsFilePrefix.."offz", -gnMaxPoleOffs, gnMaxPoleOffs, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".offz"))
+  pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".crossiz_con"), gsFilePrefix.."crossiz", 0, gnMaxCrossSiz, 3)
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".crossiz"))
   CPanel:AddControl( "Numpad", {
-            Label      = "Key to start on:",
+            Label      = language.GetPhrase("tool."..gsFileName..".key_con"),
             Command    = gsFilePrefix.."key",
-            ButtonSize = 10 } )
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable para-dia magnetism",
-            Command = gsFilePrefix.."itother"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable ghosting",
-            Command = gsFilePrefix.."enghost"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable N/S Advisor",
-            Command = gsFilePrefix.."advise"})
-
-  CPanel:AddControl("Checkbox", {
-            Label   = "Enable baloon properties",
-            Command = gsFilePrefix.."property"})
+            ButtonSize = 10 }):SetTooltip(language.GetPhrase("tool."..gsFileName..".key"))
+  pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".matercfg_con"), gsFilePrefix.."matercfg")
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".matercfg"))
+  pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".itother_con"), gsFilePrefix.."itother")
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".itother"))
+  pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".enghost_con"), gsFilePrefix.."enghost")
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".enghost"))
+  pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".advise_con"), gsFilePrefix.."advise")
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".advise"))
+  pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".property_con"), gsFilePrefix.."property")
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".property"))
 end

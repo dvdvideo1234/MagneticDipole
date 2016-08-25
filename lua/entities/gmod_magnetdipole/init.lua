@@ -1,8 +1,8 @@
-/*
+--[[
  * The Magnet dipole entity type file
  * Describes its entity as is server side
  * Location "lua/entities/gmod_magnetdipole"
- */
+]]--
 
 AddCSLuaFile( "cl_init.lua" )
 AddCSLuaFile( "shared.lua" )
@@ -41,14 +41,15 @@ function ENT:Initialize()
   if(WireLib) then
     WireLib.CreateSpecialInputs(self,{
       "nPowerOn", "nStrength", "nDampingVel", "nDampingRot",
-      "nIterOthers", "nLength", "nSearchRad", "vPoleDirection"
+      "nIterOthers", "nMaterialConf", "nLength", "nSearchRad", "vPoleDirection"
     }, { "NORMAL", "NORMAL", "NORMAL", "NORMAL",
-         "NORMAL", "NORMAL", "NORMAL", "VECTOR" }, {
+         "NORMAL", "NORMAL", "NORMAL", "NORMAL", "VECTOR" }, {
       " Power it On ",
       " Strength on the Magnet Dipole ",
       " Linear damping of the PhysObj ",
       " Angular damping of the PhysObj ",
       " Para/Dia magnetism enabled ",
+      " Material configuration enabled ",
       " Distance from centre to any pole ",
       " Dipole search radius ",
       " Local vector of the South pole "
@@ -82,13 +83,14 @@ ENT.FoundCnt = 0
 ENT.FoundArr = {}
 ENT.EnIOther = false
 ENT.OnState  = false
+ENT.EnMater  = false
 
 function ENT:Think()
   local NextTime  = CurTime() + 0.005
   local Phys      = self:GetPhysicsObject()
   local MineClass = self:GetClass()
   local wPowerOn, wStrength, wDampingVel, wDampingRot
-  local wEnIterOther, wLength, wSearchRad, wPoleDirection
+  local wEnIterOther, wEnMaterConf, wLength, wSearchRad, wPoleDirection
 
   if(WireLib) then
     wLength        =  self.Inputs["nLength"].Value
@@ -98,6 +100,7 @@ function ENT:Think()
     wDampingRot    =  self.Inputs["nDampingRot"].Value
     wEnIterOther   = (self.Inputs["nIterOthers"].Value ~= 0)
     wSearchRad     =  self.Inputs["nSearchRad"].Value
+    wEnMaterConf   = (self.Inputs["nMaterialConf"].Value ~= 0)
     wPoleDirection =  self.Inputs["vPoleDirection"].Value
   end
   -- If on by wire don't turn off by numpad...
@@ -112,8 +115,11 @@ function ENT:Think()
   if(wDampRot and wDampRot > 0) then
     self:SetDampRot(wDampRot)
   end
-  if(wEnIterOther and wEnIterOther > 0) then
+  if(wEnIterOther and wEnIterOther ~= 0) then
     self:SetIteractOthers(wEnIterOther)
+  end
+  if(wEnMaterConf and wEnMaterConf ~= 0) then
+    self:SetMaterialConfig(wEnMaterConf)
   end
   if(wLength and wLength > 0) then
     self:SetPoleLength(wLength)

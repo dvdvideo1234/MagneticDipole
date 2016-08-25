@@ -1,8 +1,8 @@
-/*
+--[[
  * The Magnet module Shared file
  * Magnet module shared stuff
  * Location "lua/entities/gmod_magnetdipole"
- */
+]]--
 
 ENT.Type            = "anim"
 if(WireLib) then
@@ -57,6 +57,14 @@ end
 
 function ENT:SetIteractOthers(anyStatus)
   self.EnIOther = tobool(anyStatus)
+end
+
+function ENT:GetMaterialConfig()
+  return self.EnMater
+end
+
+function ENT:SetMaterialConfig(anyStatus)
+  self.EnMater = tobool(anyStatus)
 end
 
 function ENT:GetSearchRadius()
@@ -220,16 +228,16 @@ function GetTracePhys(oTrace)
      trEnt:GetPhysicsObject():IsValid() and not
          ( trEnt:IsPlayer()  or
            trEnt:IsNPC()     or
-           trEnt:IsVehicle() )
-  ) then
-    return trEnt  -- PhysObj ENT
-  end
+           trEnt:IsVehicle() or
+           trEnt:IsRagdoll() or
+           trEnt:IsWidget() )
+  ) then return trEnt end  -- PhysObj ENT
   return nil -- Some other kind of ENT
 end
 
 function RoundValue(exact, frac)
-    local q,f = math.modf(exact/frac)
-    return frac * (q + (f > 0.5 and 1 or 0))
+  local q,f = math.modf(exact/frac)
+  return frac * (q + (f > 0.5 and 1 or 0))
 end
 
 -- Gets the file name of the model
@@ -299,61 +307,29 @@ end
 
 function GetMagneticMaterialGain(oEnt)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
-  local Enum = oEnt:GetMaterialType()
-  if(Enum == MAT_ALIENFLESH	) then return -0.00003 end
-  if(Enum == MAT_ANTLION	  ) then return -0.00001 end
+  local Enum = oEnt:GetMaterialType() -- https://wiki.garrysmod.com/page/Enums/MAT
+  if(Enum == MAT_ALIENFLESH ) then return -0.00003 end
+  if(Enum == MAT_ANTLION    ) then return -0.00001 end
   if(Enum == MAT_BLOODYFLESH) then return  0.00012 end
-  if(Enum == MAT_CLIP	      ) then return  0.85000 end
-  if(Enum == MAT_COMPUTER	  ) then return  0.91000 end
-  if(Enum == MAT_CONCRETE	  ) then return  0.00300 end
-  if(Enum == MAT_DIRT	      ) then return  0.00020 end
+  if(Enum == MAT_CLIP       ) then return  0.85000 end
+  if(Enum == MAT_COMPUTER   ) then return  0.91000 end
+  if(Enum == MAT_CONCRETE   ) then return  0.00300 end
+  if(Enum == MAT_DIRT       ) then return  0.00020 end
   if(Enum == MAT_EGGSHELL   ) then return -0.00007 end
-  if(Enum == MAT_FLESH	    ) then return  0.00050 end
-  if(Enum == MAT_FOLIAGE	  ) then return  0.01250 end
-  if(Enum == MAT_GLASS	    ) then return -0.00001 end
-  if(Enum == MAT_GRATE	    ) then return -0.00005 end
-  if(Enum == MAT_SNOW	      ) then return -0.00004 end
-  if(Enum == MAT_METAL	    ) then return  1.00000 end
-  if(Enum == MAT_PLASTIC	  ) then return -0.00011 end
-  if(Enum == MAT_SAND	      ) then return  0.00009 end
-  if(Enum == MAT_SLOSH	    ) then return  0.00007 end
-  if(Enum == MAT_TILE	      ) then return  0.00001 end
-  if(Enum == MAT_GRASS	    ) then return -0.00001 end
-  if(Enum == MAT_VENT	      ) then return  0.98000 end
-  if(Enum == MAT_WOOD	      ) then return -0.00034 end
+  if(Enum == MAT_FLESH      ) then return  0.00050 end
+  if(Enum == MAT_FOLIAGE    ) then return  0.01250 end
+  if(Enum == MAT_GLASS      ) then return -0.00001 end
+  if(Enum == MAT_GRATE      ) then return -0.00005 end
+  if(Enum == MAT_SNOW       ) then return -0.00004 end
+  if(Enum == MAT_METAL      ) then return  1.00000 end
+  if(Enum == MAT_PLASTIC    ) then return -0.00011 end
+  if(Enum == MAT_SAND       ) then return  0.00009 end
+  if(Enum == MAT_SLOSH      ) then return  0.00007 end
+  if(Enum == MAT_TILE       ) then return  0.00001 end
+  if(Enum == MAT_GRASS      ) then return -0.00001 end
+  if(Enum == MAT_VENT       ) then return  0.98000 end
+  if(Enum == MAT_WOOD       ) then return -0.00034 end
   if(Enum == MAT_DEFAULT    ) then return  0.00001 end
   if(Enum == MAT_WARPSHIELD ) then return  0.55000 end
   return 0
-end
-
-function StringReplace(sStr,tRep)
-  if(not sStr or sStr == "") then return "" end
-  if(not tRep) then return "" end
-  if(not tRep[1]) then return "" end
-  if(not tRep[1][1]) then return "" end
-  if(not tRep[1][2]) then return "" end
-  local Len = string.len(sStr)
-  local S = 1
-  local Rep = 1
-  local Rez = ""
-  local Sub, Ch, E
-  while(S <= Len) do
-    Ch = string.sub(sStr,S,S)
-    while(tRep[Rep] and tRep[Rep][1] and tRep[Rep][2]) do
-      E = S + string.len(tRep[Rep][1])-1
-      Sub = string.sub(sStr,S,E)
-      if(Sub == tRep[Rep][1]) then
-        Rez = Rez..tRep[Rep][2]
-        S = E
-        Ch = ""
-      end
-      Rep = Rep + 1
-    end
-    if(Ch ~= "") then
-      Rez = Rez..Ch
-    end
-    S = S + 1
-    Rep = 1
-  end
-  return Rez
 end
