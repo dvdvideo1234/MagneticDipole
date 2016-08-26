@@ -1,7 +1,7 @@
 --[[
  * The Magnet dipole entity type file
  * Describes its entity as is server side
- * Location "lua/entities/gmod_magnetdipole"
+ * Location "lua/entities/gmod_magnetdipole/init.lua"
 ]]--
 
 AddCSLuaFile( "cl_init.lua" )
@@ -17,17 +17,16 @@ include('shared.lua')
 -- SearRad       - How Many glu the magnet should be searching for others ( 0 for passive - does not search )
 -- On            - Pretty obvious isn't it ?
 
--- Source: http://en.wikipedia.org/wiki/Force_between_magnets#Magnetic_dipole-dipole_interaction
+-- Source: https://en.wikipedia.org/wiki/Force_between_magnets#Gilbert_Model
 -- Inform: Force between two magnetic poles ( Because they are indeed poles )
 --[[
-       F---- Gmod does not have that ...
+       F---- Gmod does not have that ... GetPermeability()
        |
        V
 F = ( miu * Strength_1 * Strength_2 ) / ( 4 * PI * R^2 )
                                                    ^
                                                    |
                                                    L---- Measured in GLU instead of Meters ..
-miu(Air) = 1.25663753*10^(-6)
 ]]
 
 function ENT:Initialize()
@@ -41,9 +40,9 @@ function ENT:Initialize()
   if(WireLib) then
     WireLib.CreateSpecialInputs(self,{
       "nPowerOn", "nStrength", "nDampingVel", "nDampingRot",
-      "nIterOthers", "nMaterialConf", "nLength", "nSearchRad", "vPoleDirection"
+      "nIterOthers", "nLength", "nSearchRad", "vPoleDirection"
     }, { "NORMAL", "NORMAL", "NORMAL", "NORMAL",
-         "NORMAL", "NORMAL", "NORMAL", "NORMAL", "VECTOR" }, {
+         "NORMAL", "NORMAL", "NORMAL", "VECTOR" }, {
       " Power it On ",
       " Strength on the Magnet Dipole ",
       " Linear damping of the PhysObj ",
@@ -55,14 +54,14 @@ function ENT:Initialize()
       " Local vector of the South pole "
     });
     WireLib.CreateSpecialOutputs(self, {
-      "eMagnetDip", "vForceS", "vForceN",
-      "vPosS", "vPosN", "nFoundCnt", "aFaundArr"
-    }, { "ENTITY", "VECTOR", "VECTOR",
-         "VECTOR", "VECTOR", "NORMAL", "ARRAY" } , {
-      " Props are within the radius ",
+      "eMagnetEnt", "vForceS", "vForceN"  , "vPosC"
+      "vPosS"     , "vPosN"  , "nFoundCnt", "aFaundArr"
+    }, { "ENTITY", "VECTOR", "VECTOR", "VECTOR",
+         "VECTOR", "VECTOR", "NORMAL", "NORMAL", "ARRAY" } , {
       " ENT of the Magnet Dipole ",
       " Force on the south pole ",
       " Force on the north pole ",
+      " Position of the center ",
       " Position of the south pole ",
       " Position of the north pole ",
       " Discovered ENTs count ",
@@ -71,26 +70,24 @@ function ENT:Initialize()
   end
 end
 
-ENT.Strength = 0
-ENT.DampVel  = 0
-ENT.DampRot  = 0
-ENT.SearRad  = 0
-ENT.Length   = 0
-ENT.PoleDirX = 0
-ENT.PoleDirY = 0
-ENT.PoleDirZ = 0
-ENT.FoundCnt = 0
-ENT.FoundArr = {}
-ENT.EnIOther = false
-ENT.OnState  = false
-ENT.EnMater  = false
+ENT.mnStrength = 0
+ENT.mnDampVel  = 0
+ENT.mnDampRot  = 0
+ENT.mnSearRad  = 0
+ENT.mnLength   = 0
+ENT.mnPoleDirX = 0
+ENT.mnPoleDirY = 0
+ENT.mnPoleDirZ = 0
+ENT.mnFoundCnt = 0
+ENT.mtFoundArr = {}
+ENT.mbEnIOther = false
+ENT.mbOnState  = false
 
 function ENT:Think()
-  local NextTime  = CurTime() + 0.005
-  local Phys      = self:GetPhysicsObject()
+  local NextTime  = CurTime() + 0.01
   local MineClass = self:GetClass()
   local wPowerOn, wStrength, wDampingVel, wDampingRot
-  local wEnIterOther, wEnMaterConf, wLength, wSearchRad, wPoleDirection
+  local wEnIterOther, wLength, wSearchRad, wPoleDirection
 
   if(WireLib) then
     wLength        =  self.Inputs["nLength"].Value
@@ -100,10 +97,9 @@ function ENT:Think()
     wDampingRot    =  self.Inputs["nDampingRot"].Value
     wEnIterOther   = (self.Inputs["nIterOthers"].Value ~= 0)
     wSearchRad     =  self.Inputs["nSearchRad"].Value
-    wEnMaterConf   = (self.Inputs["nMaterialConf"].Value ~= 0)
     wPoleDirection =  self.Inputs["vPoleDirection"].Value
   end
-  -- If on by wire don't turn off by numpad...
+  -- If on by wire do not turn off by numpad...
   local On = wPowerOn or self:GetOnState()
   -- Assert parameters Wire/Numpad
   if(wStrength and wStrength > 0) then
@@ -115,11 +111,8 @@ function ENT:Think()
   if(wDampRot and wDampRot > 0) then
     self:SetDampRot(wDampRot)
   end
-  if(wEnIterOther and wEnIterOther ~= 0) then
-    self:SetIteractOthers(wEnIterOther)
-  end
-  if(wEnMaterConf and wEnMaterConf ~= 0) then
-    self:SetMaterialConfig(wEnMaterConf)
+  if(wEnIterOther) then -- Boolean
+    self:SetInteractOthers(wEnIterOther)
   end
   if(wLength and wLength > 0) then
     self:SetPoleLength(wLength)
@@ -127,21 +120,16 @@ function ENT:Think()
   if(wSearchRad and wSearchRad > 0) then
     self:SetSearchRadius(wSearchRad)
   end
-  if(wPoleDirection and
-     wPoleDirection:Length() > 0
-  ) then
-    self:SetPoleDirectionLocal(wPoleDirection[1],
-                               wPoleDirection[2],
-                               wPoleDirection[3])
+  if(wPoleDirection and wPoleDirection:Length() > 0) then
+    self:SetPoleDirectionLocal(wPoleDirection[1], wPoleDirection[2], wPoleDirection[3])
   end
-  -- Update Baloon
   local Flag = self:GetNWBool(MineClass.."_pro_en")
-  if(Flag) then
+  if(Flag) then -- Update Baloon if enabled to save communication
     self:SetNWString(MineClass.."_pro_tx",self:GetMagnetOverlayText())
   end
-
+  local Phys = self:GetPhysicsObject()
   if(Phys and Phys:IsValid() and On) then
-    local InterOth   = self:GetIteractOthers()
+    local InterOth   = self:GetInteractOthers()
     local DamVel     = self:GetDampVel()
     local DamRot     = self:GetDampRot()
     local MineCentre = self:GetMagnetCenter()
@@ -155,83 +143,35 @@ function ENT:Think()
       self:ClearDiscovary()
       local Others = ents.FindInSphere(MineCentre, SearchRad)
       if(Others) then
-        local vForceS = Vector()
-        local vForceN = Vector()
-        local dirNN   = Vector()
-        local dirNS   = Vector()
-        local dirSN   = Vector()
-        local dirSS   = Vector()
-        local magNN, magNS, magSN, magSS
+        local vForceS, vForceN = Vector(), Vector()
+        local dirNN, dirNS, dirSN, dirSS = Vector(), Vector(), Vector(), Vector()
         for _, Other in ipairs(Others) do
-          if(Other and
-             Other:IsValid() and
-             Other ~= self
-          ) then
-            local OtherPhys  = Other:GetPhysicsObject()
+          if(Other and Other:IsValid() and Other ~= self) then
+            local OtherPhys = Other:GetPhysicsObject()
             if(OtherPhys and OtherPhys:IsValid()) then
-              -- If not the force will be Inf ( pole distance^2 = 0 ) !
-              --- Hard coding because
-              --- ( 4 * PI * 10 ^ (-7) ) / ( 4 * PI ) = 10^(-7)
-              --- 10^(-5) -- Powerful magnets
               local OtherClass = Other:GetClass()
               if(OtherClass == "gmod_magnetdipole") then
                 local OtherCenter = Other:GetMagnetCenter()
                 local OtherSouth  = Other:GetSouthPosOrigin(OtherCenter)
                 local OtherNorth  = Other:GetNorthPosOrigin(OtherCenter)
-                local Gain = Other:GetStrength() * self:GetStrength()
-                --- Repel Mine South [ MineS - OtherS ]
-                dirSS:Set(MineSouth)
-                dirSS:Sub(OtherSouth)
-                magSS = dirSS:Length()
-                magSS = Gain / ( magSS * magSS )
-                dirSS:Normalize()
-                --- Contract Mine South [ MineS - OtherN ]
-                dirSN:Set(MineSouth)
-                dirSN:Sub(OtherNorth)
-                magSN = dirSN:Length()
-                magSN = Gain / ( magSN * magSN )
-                dirSN:Normalize()
-                --- Contract Mine North [ MineN - OtherS ]
-                dirNS:Set(MineNorth)
-                dirNS:Sub(OtherSouth)
-                magNS = dirNS:Length()
-                magNS = Gain / ( magNS * magNS )
-                dirNS:Normalize()
-                --- Repel Mine North [ MineN - OtherN ]
-                dirNN:Set(MineNorth)
-                dirNN:Sub(OtherNorth)
-                magNN = dirNN:Length()
-                magNN = Gain / ( magNN * magNN )
-                dirNN:Normalize()
-                -- Relative to Mine Pole S
-                vForceS:Add( magSS * dirSS)
-                vForceS:Add(-magSN * dirSN)
-                -- Relative to Mine Pole N
-                vForceN:Add(-magNS * dirNS)
-                vForceN:Add( magNN * dirNN)
-                self:SetDiscovery(Other)
+                local Gain = (Other:GetStrength() * self:GetStrength() * GetPermeability()[2]) / (4 * math.pi())
+                --- Repel   Mine South [ MineS - OtherS ] -- MagnitudePole(vDir, vSet, vSub, nGain)
+                self:MagnitudePole(dirSS, MineSouth, OtherSouth,  Gain); vForceS:Add(dirSS)
+                --- Attract Mine South [ MineS - OtherN ]
+                self:MagnitudePole(dirSN, MineSouth, OtherNorth, -Gain); vForceS:Add(dirSN)
+                --- Attract Mine North [ MineN - OtherS ]
+                self:MagnitudePole(dirNS, MineNorth, OtherSouth, -Gain); vForceN:Add(dirNS)
+                --- Repel   Mine North [ MineN - OtherN ]
+                self:MagnitudePole(dirNN, MineNorth, OtherNorth,  Gain); vForceN:Add(dirNN)
+                self:AddDiscovery(Other)
               elseif(InterOth and OtherClass == "prop_physics") then
-                local Gain = self:GetStrength()
-                      Gain = Gain * Gain
-                      Gain = Gain * GetMagneticMaterialGain(Other)
+                local Gain = (self:GetStrength() * GetMaterialGain(Other) * GetPermeability()[2]) / (4 * math.pi())
                 local OtherCenter = Other:LocalToWorld(Other:OBBCenter())
                 --- South pole
-                dirSS:Set(MineSouth)
-                dirSS:Sub(OtherCenter)
-                magSS = dirSS:Length()
-                magSS = Gain / (magSS * magSS)
-                dirSS:Normalize()
+                self:MagnitudePole(dirSS, MineSouth, OtherCenter, -Gain); vForceS:Add(dirSS)
                 --- North Pole
-                dirNN:Set(MineNorth)
-                dirNN:Sub(OtherCenter)
-                magNN = dirNN:Length()
-                magNN = Gain / (magNN * magNN)
-                dirNN:Normalize()
-                -- Relative to Mine Pole South
-                vForceS:Add(-magSS * dirSS)
-                -- Relative to Mine Pole North
-                vForceN:Add(-magNN * dirNN)
-                self:SetDiscovery(Other)
+                self:MagnitudePole(dirNN, MineNorth, OtherCenter, -Gain); vForceN:Add(dirNN)
+                self:AddDiscovery(Other)
               end
             end
           end
@@ -247,22 +187,20 @@ function ENT:Think()
     if(WireLib) then
       WireLib.TriggerOutput(self,"vPosS",MineSouth)
       WireLib.TriggerOutput(self,"vPosN",MineNorth)
+      WireLib.TriggerOutput(self,"vPosC",MineCentre)
     end
   end
   if(WireLib) then
-    WireLib.TriggerOutput(self,"eMagnetDip",self)
-    WireLib.TriggerOutput(self,"nFoundCnt",self.FoundCnt)
-    WireLib.TriggerOutput(self,"aFaundArr",self.FoundArr)
+    WireLib.TriggerOutput(self,"eMagnetEnt",self)
+    WireLib.TriggerOutput(self,"nFoundCnt",self.mnFoundCnt)
+    WireLib.TriggerOutput(self,"aFaundArr",self.mtFoundArr)
   end
   self:NextThink(NextTime)
   return true
 end
 
 function MagnetDipoleToggleState(oPly, oEnt )
-  if( oEnt and
-      oEnt:IsValid() and
-      oEnt:GetClass() == "gmod_magnetdipole"
-  ) then
+  if(oEnt and oEnt:IsValid() and oEnt:GetClass() == "gmod_magnetdipole") then
     local flag = oEnt:GetOnState()
     if(flag) then
       oEnt:SetOnState(false)

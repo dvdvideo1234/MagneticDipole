@@ -1,7 +1,7 @@
 --[[
  * The Magnet Shared file
  * Magnet client side methods stuff
- * Location "lua/entities/gmod_magnetdipole"
+ * Location "lua/entities/gmod_magnetdipole/cl_init.lua"
 ]]--
 
 include('shared.lua')
