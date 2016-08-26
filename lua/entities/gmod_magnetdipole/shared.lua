@@ -4,173 +4,6 @@
  * Location "lua/entities/gmod_magnetdipole/shared.lua"
 ]]--
 
-ENT.Type            = "anim"
-if(WireLib) then
-  ENT.Base          = "base_wire_entity"
-  ENT.WireDebugName = "Magnet Dipole"
-else
-  ENT.Base          = "base_gmodentity"
-end
-ENT.PrintName       = "Magnet Dipole"
-ENT.Author          = "dvd_video"
-ENT.Contact         = "dvd_video@abv.bg"
-ENT.Spawnable       = false
-ENT.AdminSpawnable  = false
-
-function ENT:ClearDiscovary()
-  local Arr, Cnt = self.mtFoundArr, self.mnFoundCnt
-  while(Cnt > 0) do Arr[Cnt] = nil; Cnt = Cnt - 1; end
-  self.mnFoundCnt = Cnt -- Empty stack
-end
-
-function ENT:AddDiscovery(oEnt)
-  if(oEnt and oEnt:IsValid()) then
-    self.mnFoundCnt = self.mnFoundCnt + 1
-    self.mtFoundArr[self.mnFoundCnt] = oEnt
-  end
-end
-
-function ENT:GetDiscovery(nIndex)
-  local Index = tonumber(nIndex) or 0
-  if(Index <= 0 or Index > self.mnFoundCnt ) then return nil end
-  return self.mtFoundArr[Index]
-end
-
-function ENT:GetDiscoveryCount() return self.mnFoundCnt end
-function ENT:GetDiscoveryArray() return self.mnFoundArr end
-
-function ENT:GetOnState() return   self.mbOnState end
-function ENT:SetOnState(anyStatus) self.mbOnState = tobool(anyStatus) end
-
-function ENT:GetInteractOthers() return  self.mbEnIOther end
-function ENT:SetInteractOthers(anyStatus) self.mbEnIOther = tobool(anyStatus) end
-
-function ENT:GetSearchRadius()
-  return self.mnSearRad
-end
-
-function ENT:SetSearchRadius(nRadius)
-  local Radius = tonumber(nRadius) or 0
-  if(Radius and Radius >= 0) then
-    self.mnSearRad = Radius
-  end
-end
-
-function ENT:GetStrength() return self.mnStrength end
-
-function ENT:SetStrength(nStr)
-  local Str = tonumber(nStr) or 0
-  if(Str and Str > 0) then self.mnStrength = Str end
-end
-
-function ENT:GetDampVel() return self.mnDampVel end
-
-function ENT:SetDampVel(nDamp)
-  local nDamp = tonumber(nDamp) or 0
-  if(nDamp and nDamp > 0) then
-    self.mnDampVel = nDamp
-  end
-end
-
-function ENT:GetDampRot() return self.mnDampRot end
-
-function ENT:SetDampRot(nDamp)
-  local nDamp = tonumber(nDamp) or 0
-  if(nDamp and nDamp > 0) then
-    self.mnDampRot = nDamp
-  end
-end
-
-function ENT:GetPoleDirectionLocal()
-  local Dir = Vector(self.mnPoleDirX, self.mnPoleDirY, self.mnPoleDirZ); return Dir
-end
-
-function ENT:SetPoleDirectionLocal(nX,nY,nZ)
-  local X = tonumber(nX) or 0
-  local Y = tonumber(nY) or 0
-  local Z = tonumber(nZ) or 0
-  if(X == 0 and Y == 0 and Z == 0) then
-    Z = 1 -- Default ENT's Local Z
-  end
-  local Cls = self:GetClass()
-  local Dir = Vector(X,Y,Z)
-        Dir:Normalize()
-  self.mnPoleDirX = Dir[1]
-  self.mnPoleDirY = Dir[2]
-  self.mnPoleDirZ = Dir[3]
-  self:SetNWFloat(Cls.."_pdir_x",self.mnPoleDirX)
-  self:SetNWFloat(Cls.."_pdir_y",self.mnPoleDirY)
-  self:SetNWFloat(Cls.."_pdir_z",self.mnPoleDirZ)
-end
-
-function ENT:GetPoleLength() return self.mnLength end
-
-function ENT:SetPoleLength(nLen)
-  local Len = tonumber(nLen) or 0
-  if(Len and Len > 0) then
-    self.mnLength = Len
-    self:SetNWFloat(self:GetClass().."_plen",self.mnLength)
-  end
-end
-
-function ENT:GetMagnetCenter() return self:LocalToWorld(self:OBBCenter()) end
-
-function ENT:GetSouthPosOrigin(Origin)
-  local SPos = self:GetPoleDirectionLocal()
-        SPos:Rotate(self:GetAngles())
-        SPos:Mul(self:GetPoleLength())
-  if(Origin) then SPos:Add(Origin) end; return SPos
-end
-
-function ENT:GetNorthPosOrigin(Origin)
-  local NPos = self:GetPoleDirectionLocal()
-        NPos:Rotate(self:GetAngles())
-        NPos:Mul(-self:GetPoleLength())
-  if(Origin) then NPos:Add(Origin) end; return NPos
-end
-
-function ENT:GetMagnetOverlayText()
-  local PoleDir = self:GetPoleDirectionLocal()
-  local Text =                 (tostring(self))..
-               "\nStrength: "..(RoundValue(self:GetStrength(),0.01) or "N/A")..
-               "\nDamping: {"..(RoundValue(self:GetDampVel(),0.01) or "N/A")..", "
-                             ..(RoundValue(self:GetDampRot(),0.01) or "N/A").."}"..
-                 "\nLength: "..(RoundValue(self:GetPoleLength(),0.01) or "N/A")..
-                 "\nRadius: "..(RoundValue(self:GetSearchRadius(),0.01) or "N/A")..
-               "\nPoledir: {"..(RoundValue(PoleDir[1], 0.001) or "N")..", "
-                             ..(RoundValue(PoleDir[2], 0.001) or "N")..", "
-                             ..(RoundValue(PoleDir[3], 0.001) or "N").."}"..
-             "\nEnts found: "..(tostring(self:GetDiscoveryCount()))..
-             "\nIs Working: "..(tostring(self:GetOnState()))..
-        "\nEnable Para/Dia: "..(tostring(self:GetInteractOthers()))
-  return Text
-end
-
-function ENT:MagnitudePole(vDir, vSet, vSub, nGain)
-  vDir:Set(vSet); vDir:Sub(vSub)
-  local Mag = vDir:Length(); Mag = (nGain / ( Mag * Mag ))
-  vDir:Normalize(); vDir:Mul(Mag)
-end
-
-function ENT:Setup(strength , dampvel  , damprot  , itother  , searchrad, length   ,
-                   offx     , offy     , offz     , advise   , property )
-  local Class = self:GetClass()
-  if(Class == "gmod_magnetdipole") then
-    self:SetSearchRadius(searchrad)
-    self:SetStrength(strength)
-    self:SetDampVel(dampvel)
-    self:SetDampRot(damprot)
-    self:SetInteractOthers(itother)
-    self:SetPoleLength(length)
-    self:SetPoleDirectionLocal(offx,offy,offz)
-    self:SetNWBool(Class.."_adv_en",advise)
-    self:SetNWBool(Class.."_pro_en",property)
-    if(property) then
-      self:SetNWString(Class.."_pro_tx",self:GetMagnetOverlayText())
-    end
-  end
-end
-
 --Extracts valid physObj ENT from trace
 function GetTracePhys(oTrace)
   if(not oTrace) then return nil end      -- Duhh ...
@@ -325,4 +158,171 @@ function SetPermeability(nID)
   local Max = #Permeability
   if(ID > Max) then Permeability.Now = ID % Max; return end
   Permeability.Now = ID
+end
+
+ENT.Type            = "anim"
+if(WireLib) then
+  ENT.Base          = "base_wire_entity"
+  ENT.WireDebugName = "Magnet Dipole"
+else
+  ENT.Base          = "base_gmodentity"
+end
+ENT.PrintName       = "Magnet Dipole"
+ENT.Author          = "dvd_video"
+ENT.Contact         = "dvd_video@abv.bg"
+ENT.Spawnable       = false
+ENT.AdminSpawnable  = false
+
+function ENT:ClearDiscovary()
+  local Arr, Cnt = self.mtFoundArr, self.mnFoundCnt
+  while(Cnt > 0) do Arr[Cnt] = nil; Cnt = Cnt - 1; end
+  self.mnFoundCnt = Cnt -- Empty stack
+end
+
+function ENT:AddDiscovery(oEnt)
+  if(oEnt and oEnt:IsValid()) then
+    self.mnFoundCnt = self.mnFoundCnt + 1
+    self.mtFoundArr[self.mnFoundCnt] = oEnt
+  end
+end
+
+function ENT:GetDiscovery(nIndex)
+  local Index = tonumber(nIndex) or 0
+  if(Index <= 0 or Index > self.mnFoundCnt ) then return nil end
+  return self.mtFoundArr[Index]
+end
+
+function ENT:GetDiscoveryCount() return self.mnFoundCnt end
+function ENT:GetDiscoveryArray() return self.mnFoundArr end
+
+function ENT:GetOnState() return   self.mbOnState end
+function ENT:SetOnState(anyStatus) self.mbOnState = tobool(anyStatus) end
+
+function ENT:GetInteractOthers() return  self.mbEnIOther end
+function ENT:SetInteractOthers(anyStatus) self.mbEnIOther = tobool(anyStatus) end
+
+function ENT:GetSearchRadius()
+  return self.mnSearRad
+end
+
+function ENT:SetSearchRadius(nRadius)
+  local Radius = tonumber(nRadius) or 0
+  if(Radius and Radius >= 0) then
+    self.mnSearRad = Radius
+  end
+end
+
+function ENT:GetStrength() return self.mnStrength end
+
+function ENT:SetStrength(nStr)
+  local Str = tonumber(nStr) or 0
+  if(Str and Str > 0) then self.mnStrength = Str end
+end
+
+function ENT:GetDampVel() return self.mnDampVel end
+
+function ENT:SetDampVel(nDamp)
+  local nDamp = tonumber(nDamp) or 0
+  if(nDamp and nDamp > 0) then
+    self.mnDampVel = nDamp
+  end
+end
+
+function ENT:GetDampRot() return self.mnDampRot end
+
+function ENT:SetDampRot(nDamp)
+  local nDamp = tonumber(nDamp) or 0
+  if(nDamp and nDamp > 0) then
+    self.mnDampRot = nDamp
+  end
+end
+
+function ENT:GetPoleDirectionLocal()
+  local Dir = Vector(self.mnPoleDirX, self.mnPoleDirY, self.mnPoleDirZ); return Dir
+end
+
+function ENT:SetPoleDirectionLocal(nX,nY,nZ)
+  local X = tonumber(nX) or 0
+  local Y = tonumber(nY) or 0
+  local Z = tonumber(nZ) or 0
+  if(X == 0 and Y == 0 and Z == 0) then
+    Z = 1 -- Default ENT's Local Z
+  end
+  local Cls = self:GetClass()
+  local Dir = Vector(X,Y,Z)
+        Dir:Normalize()
+  self.mnPoleDirX = Dir[1]
+  self.mnPoleDirY = Dir[2]
+  self.mnPoleDirZ = Dir[3]
+  self:SetNWFloat(Cls.."_pdir_x",self.mnPoleDirX)
+  self:SetNWFloat(Cls.."_pdir_y",self.mnPoleDirY)
+  self:SetNWFloat(Cls.."_pdir_z",self.mnPoleDirZ)
+end
+
+function ENT:GetPoleLength() return self.mnLength end
+
+function ENT:SetPoleLength(nLen)
+  local Len = tonumber(nLen) or 0
+  if(Len and Len > 0) then
+    self.mnLength = Len
+    self:SetNWFloat(self:GetClass().."_plen",self.mnLength)
+  end
+end
+
+function ENT:GetMagnetCenter() return self:LocalToWorld(self:OBBCenter()) end
+
+function ENT:GetSouthPosOrigin(Origin)
+  local SPos = self:GetPoleDirectionLocal()
+        SPos:Rotate(self:GetAngles())
+        SPos:Mul(self:GetPoleLength())
+  if(Origin) then SPos:Add(Origin) end; return SPos
+end
+
+function ENT:GetNorthPosOrigin(Origin)
+  local NPos = self:GetPoleDirectionLocal()
+        NPos:Rotate(self:GetAngles())
+        NPos:Mul(-self:GetPoleLength())
+  if(Origin) then NPos:Add(Origin) end; return NPos
+end
+
+function ENT:GetMagnetOverlayText()
+  local PoleDir = self:GetPoleDirectionLocal()
+  local Text =                 (tostring(self))..
+               "\nStrength: "..(RoundValue(self:GetStrength(),0.01) or "N/A")..
+               "\nDamping: {"..(RoundValue(self:GetDampVel(),0.01) or "N/A")..", "
+                             ..(RoundValue(self:GetDampRot(),0.01) or "N/A").."}"..
+                 "\nLength: "..(RoundValue(self:GetPoleLength(),0.01) or "N/A")..
+                 "\nRadius: "..(RoundValue(self:GetSearchRadius(),0.01) or "N/A")..
+               "\nPoledir: {"..(RoundValue(PoleDir[1], 0.001) or "N")..", "
+                             ..(RoundValue(PoleDir[2], 0.001) or "N")..", "
+                             ..(RoundValue(PoleDir[3], 0.001) or "N").."}"..
+             "\nEnts found: "..(tostring(self:GetDiscoveryCount()))..
+             "\nIs Working: "..(tostring(self:GetOnState()))..
+        "\nEnable Para/Dia: "..(tostring(self:GetInteractOthers()))
+  return Text
+end
+
+function ENT:Setup(strength , dampvel  , damprot  , itother  , searchrad, length   ,
+                   offx     , offy     , offz     , advise   , property )
+  local Class = self:GetClass()
+  if(Class == "gmod_magnetdipole") then
+    self:SetSearchRadius(searchrad)
+    self:SetStrength(strength)
+    self:SetDampVel(dampvel)
+    self:SetDampRot(damprot)
+    self:SetInteractOthers(itother)
+    self:SetPoleLength(length)
+    self:SetPoleDirectionLocal(offx,offy,offz)
+    self:SetNWBool(Class.."_adv_en",advise)
+    self:SetNWBool(Class.."_pro_en",property)
+    if(property) then
+      self:SetNWString(Class.."_pro_tx",self:GetMagnetOverlayText())
+    end
+  end
+end
+
+function ENT:MagnitudePole(vDir, vSet, vSub, nGain)
+  vDir:Set(vSet); vDir:Sub(vSub)
+  local Mag = vDir:Length(); Mag = (nGain / ( Mag * Mag ))
+  vDir:Normalize(); vDir:Mul(Mag)
 end

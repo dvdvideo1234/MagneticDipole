@@ -54,10 +54,10 @@ function ENT:Initialize()
       " Local vector of the South pole "
     });
     WireLib.CreateSpecialOutputs(self, {
-      "eMagnetEnt", "vForceS", "vForceN"  , "vPosC"
+      "eMagnetEnt", "vForceS", "vForceN"  , "vPosC",
       "vPosS"     , "vPosN"  , "nFoundCnt", "aFaundArr"
     }, { "ENTITY", "VECTOR", "VECTOR", "VECTOR",
-         "VECTOR", "VECTOR", "NORMAL", "NORMAL", "ARRAY" } , {
+         "VECTOR", "VECTOR", "NORMAL", "ARRAY" } , {
       " ENT of the Magnet Dipole ",
       " Force on the south pole ",
       " Force on the north pole ",
@@ -154,7 +154,7 @@ function ENT:Think()
                 local OtherCenter = Other:GetMagnetCenter()
                 local OtherSouth  = Other:GetSouthPosOrigin(OtherCenter)
                 local OtherNorth  = Other:GetNorthPosOrigin(OtherCenter)
-                local Gain = (Other:GetStrength() * self:GetStrength() * GetPermeability()[2]) / (4 * math.pi())
+                local Gain = 100000 * ((Other:GetStrength() * self:GetStrength() * GetPermeability()[2]) / (4 * math.pi))
                 --- Repel   Mine South [ MineS - OtherS ] -- MagnitudePole(vDir, vSet, vSub, nGain)
                 self:MagnitudePole(dirSS, MineSouth, OtherSouth,  Gain); vForceS:Add(dirSS)
                 --- Attract Mine South [ MineS - OtherN ]
@@ -165,7 +165,7 @@ function ENT:Think()
                 self:MagnitudePole(dirNN, MineNorth, OtherNorth,  Gain); vForceN:Add(dirNN)
                 self:AddDiscovery(Other)
               elseif(InterOth and OtherClass == "prop_physics") then
-                local Gain = (self:GetStrength() * GetMaterialGain(Other) * GetPermeability()[2]) / (4 * math.pi())
+                local Gain = 100000 * ((self:GetStrength() * GetMaterialGain(Other) * GetPermeability()[2]) / (4 * math.pi))
                 local OtherCenter = Other:LocalToWorld(Other:OBBCenter())
                 --- South pole
                 self:MagnitudePole(dirSS, MineSouth, OtherCenter, -Gain); vForceS:Add(dirSS)

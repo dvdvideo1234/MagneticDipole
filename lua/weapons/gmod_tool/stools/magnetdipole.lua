@@ -159,8 +159,8 @@ if SERVER then
   end
 
   duplicator.RegisterEntityClass( gsFileClass, MakeMagnetDipole,
-                                  "Pos"       , "Ang"       , "mnNumKey"  , "msModel"   , "mnStrength", "mnDampVel" ,
-                                  "mnDampRot" , "mbEnIOther", "mbEnMater" , "mnSearRad" , "mnLength"  ,
+                                  "Pos"       , "Ang"       , "mnNumKey"  , "msModel"   , "mnStrength",
+                                  "mnDampVel" , "mnDampRot" , "mbEnIOther", "mnSearRad" , "mnLength"  ,
                                   "mnPoleDirX", "mnPoleDirY", "mnPoleDirZ", "mbAdvise" , "mbProperty")
 end
 
@@ -519,12 +519,12 @@ function TOOL.BuildCPanel(CPanel)
   local pID = GetConVar(gsFilePrefix.."permeabil"):GetInt() -- Load last used environment ID
         SetPermeability(pID)
   local pPerm, pItem = GetPermeability(), nil
-          CPanel:SetName(language.GetPhrase("tool."..gsToolNameL..".name"))
-  pItem = CPanel:Help   (language.GetPhrase("tool."..gsToolNameL..".desc"))
+          CPanel:SetName(language.GetPhrase("tool."..gsFileName..".name"))
+  pItem = CPanel:Help   (language.GetPhrase("tool."..gsFileName..".desc"))
 
   pItem = CPanel:AddControl( "ComboBox",{
             MenuButton = 1,
-            Folder     = gsToolNameL,
+            Folder     = gsFileName,
             Options    = {["#Default"] = gtConVarList},
             CVars      = table.GetKeys(gtConVarList)})
 
