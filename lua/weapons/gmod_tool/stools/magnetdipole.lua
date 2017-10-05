@@ -161,7 +161,7 @@ if SERVER then
   duplicator.RegisterEntityClass( gsFileClass, MakeMagnetDipole,
                                   "Pos"       , "Ang"       , "mnNumKey"  , "msModel"   , "mnStrength",
                                   "mnDampVel" , "mnDampRot" , "mbEnIOther", "mnSearRad" , "mnLength"  ,
-                                  "mnPoleDirX", "mnPoleDirY", "mnPoleDirZ", "mbAdvise" , "mbProperty")
+                                  "mnPoleDirX", "mnPoleDirY", "mnPoleDirZ", "mbAdvise"  , "mbProperty")
 end
 
 local function PrintNotify(oPly,sText,sNotif)
@@ -235,18 +235,18 @@ function TOOL:GetPoleLength(oTrace, nDepth)
   else Len = math.abs(Len) end; return Len
 end
 
-function TOOL:GetOffsets(oTrace, nLength)
+function TOOL:GetOffsets(oTrace, nLen)
   local Offx = (math.Clamp(self:GetClientNumber("offx") or 0,-gnMaxPoleOffs,gnMaxPoleOffs))
   local Offy = (math.Clamp(self:GetClientNumber("offy") or 0,-gnMaxPoleOffs,gnMaxPoleOffs))
   local Offz = (math.Clamp(self:GetClientNumber("offz") or 0,-gnMaxPoleOffs,gnMaxPoleOffs))
   if(Offx == 0 and Offy == 0 and Offz == 0) then
     local trEnt = oTrace.Entity
     if(trEnt and trEnt:IsValid()) then
-      local Length = tonumber(nLength) or 0
-      if(Length <= 0) then return 0, 0, 0 end
+      local Len = tonumber(nLen) or 0
+      if(Len <= 0) then return 0, 0, 0 end
       local Off = Vector()
       Off:Set(trEnt:GetPos())
-      Off:Add(Length * oTrace.HitNormal)
+      Off:Add(Len * oTrace.HitNormal)
       Off:Set(trEnt:WorldToLocal(Off))
       Offx, Offy, Offz = Off[1], Off[2], Off[3]
     end

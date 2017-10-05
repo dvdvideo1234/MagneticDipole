@@ -37,7 +37,7 @@ function magdipoleConvertModel(sStr)
   return sStr
 end
 
-local MaterialGain =
+local magdipoleMaterialGain =
 {
   [MAT_ALIENFLESH ] = -0.00003,
   [MAT_ANTLION    ] = -0.00001,
@@ -66,8 +66,8 @@ local MaterialGain =
 
 function magdipoleGetMaterialGain(oEnt)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
-  local Enum = oEnt:GetMaterialType() -- https://wiki.garrysmod.com/page/Enums/MAT
-  return (MaterialGain[Enum] or 0)
+  local MG = magdipoleMaterialGain -- https://wiki.garrysmod.com/page/Enums/MAT
+  return (MG[oEnt:GetMaterialType()] or 0)
 end
 
 local magdipolePermeability = -- Environment # Permeability # Relative permeability
@@ -108,7 +108,7 @@ local magdipolePermeability = -- Environment # Permeability # Relative permeabil
 }
 function magdipoleGetPermeabilityID(nID)
   local PB = magdipolePermeability
-  local ID = (tonumber(nID) or 0); return PB[ID]
+  local ID = math.floor(math.Clamp(tonumber(nID) or 0, 1, #PB)); return PB[ID]
 end
 
 function magdipoleGetPermeability()
@@ -118,11 +118,7 @@ end
 
 function magdipoleSetPermeability(nID)
   local PB = magdipolePermeability
-  local ID = math.floor(math.Clamp(tonumber(nID) or 0, 1, #PB))
-  if(ID < 1) then PB.Now = 1; return end
-  if(ID > Max) then; local Max = #PB
-    PB.Now = math.floor(ID % Max); return
-  end; PB.Now = ID
+  PB.Now = math.floor(math.Clamp(tonumber(nID) or 0, 1, #PB))
 end
 
 ENT.Type            = "anim"
@@ -140,7 +136,8 @@ ENT.AdminSpawnable  = false
 
 function ENT:GetMaterialGain()
   -- https://wiki.garrysmod.com/page/Enums/MAT
-  return (MaterialGain[self:GetMaterialType()] or 0)
+  local MG = magdipoleMaterialGain
+  return (MG[self:GetMaterialType()] or 0)
 end
 
 function ENT:ClearDiscovary()
@@ -291,8 +288,17 @@ function ENT:Setup(strength , dampvel  , damprot  , itother  , searchrad, length
   end
 end
 
-function ENT:MagnitudePole(vDir, vSet, vSub, nGain)
-  vDir:Set(vSet); vDir:Sub(vSub)
-  local Mag = vDir:Length(); Mag = (nGain / ( Mag * Mag ))
-  vDir:Normalize(); vDir:Mul(Mag)
+local magdipoleVecZero = Vector()
+function ENT:ResetForce()
+  local mForces = self.mForces
+  mForces.vForceS:Set(magdipoleVecZero)
+  mForces.vForceN:Set(magdipoleVecZero)
+  mForces.vDrTemp:Set(magdipoleVecZero)
+end
+
+local magdipoleMetersGLU = 0.01905 -- Convert the length to meters
+function ENT:MagnitudePole(vFor, vSet, vSub, nGain)
+  local vDir = self.mForces.vDrTemp; vDir:Set(vSet); vDir:Sub(vSub)
+  local nMag = (magdipoleMetersGLU * vDir:Length()); nMag = (nGain / ( nMag * nMag ))
+  vDir:Normalize(); vDir:Mul(nMag); vFor:Add(vDir)
 end
