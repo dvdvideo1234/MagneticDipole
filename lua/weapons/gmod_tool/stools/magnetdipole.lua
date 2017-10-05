@@ -59,7 +59,7 @@ if CLIENT then
   language.Add( "tool."..gsFileName..".right"        , "Dipole copy/Prop filter set/World filter clear")
   language.Add( "tool."..gsFileName..".reload"       , "Removes a magnet dipole")
   language.Add( "tool."..gsFileName..".name"         , "Magnet Dipole" )
-  language.Add( "tool."..gsFileName..".desc"         , "Creates magnet diplole" )
+  language.Add( "tool."..gsFileName..".desc"         , "Creates magnet dipole" )
   language.Add( "tool."..gsFileName..".0"            , "Left Click apply, Right to copy, Reload to remove" )
   language.Add( "tool."..gsFileName..".permeabil_con", "Permeability:")
   language.Add( "tool."..gsFileName..".permeabil_def", "<Select permeability>")
@@ -87,13 +87,13 @@ if CLIENT then
   language.Add( "tool."..gsFileName..".key_con"      , "Key to start on:")
   language.Add( "tool."..gsFileName..".key"          , "Defines the numpad key to be use for starting the dipole")
   language.Add( "tool."..gsFileName..".itother_con"  , "Enable para/dia magnetism")
-  language.Add( "tool."..gsFileName..".itother"      , "Enables magnet dipole iteraction with normal props")
+  language.Add( "tool."..gsFileName..".itother"      , "Enables magnet dipole interaction with normal props")
   language.Add( "tool."..gsFileName..".enghost_con"  , "Enable ghosting")
   language.Add( "tool."..gsFileName..".enghost"      , "Enables drawing the ghosted dipole to assist you where spawned")
   language.Add( "tool."..gsFileName..".advise_con"   , "Enable N/S Advisor")
-  language.Add( "tool."..gsFileName..".advise"       , "Enables the composition of lines and cirlcles drawing the dipole state")
-  language.Add( "tool."..gsFileName..".property_con" , "Enable baloon properties")
-  language.Add( "tool."..gsFileName..".property"     , "Enables drawing a baloon containing addotional dipole information")
+  language.Add( "tool."..gsFileName..".advise"       , "Enables the composition of lines and circles drawing the dipole state")
+  language.Add( "tool."..gsFileName..".property_con" , "Enable balloon properties")
+  language.Add( "tool."..gsFileName..".property"     , "Enables drawing a balloon containing additional dipole information")
   language.Add( "Undone."..gsFileName                , "Undone magnetic dipole" )
   language.Add( "Cleanup."..gsFileName               , "Cleaned up magnet dipole" )
   language.Add( "Cleaned."..gsFileName               , "Cleaned up all magnet dipoles" )
@@ -121,7 +121,7 @@ if SERVER then
     end
     if(model ~= "null") then -- <-- You never know .. ^_^
       -- Actually model handling is done by:
-      -- /gmod_magnetdipole/shared.lua -> MagnetDipoleModel(sModel)
+      -- /gmod_magnetdipole/shared.lua -> magdipoleConvertModel(sModel)
       local seMag = ents.Create(gsFileClass)
       if(seMag and seMag:IsValid()) then
         seMag:SetCollisionGroup(COLLISION_GROUP_NONE);
@@ -177,7 +177,7 @@ function TOOL:GetStrength()
 end
 
 function TOOL:GetModel()
-  return (MagnetDipoleModel(string.lower(self:GetClientInfo("model"))) or "null")
+  return (magdipoleConvertModel(string.lower(self:GetClientInfo("model"))) or "null")
 end
 
 function TOOL:GetStrength()
@@ -260,7 +260,7 @@ end
 function TOOL:LeftClick(tr)
   if(CLIENT) then return true end
   if(not tr) then return false end
-  local trEnt     = GetTracePhys(tr)
+  local trEnt     = magdipoleGetTracePhys(tr)
   if(not (tr.HitWorld or trEnt)) then return false end
   local poledepth = self:GetPoleDepth()
   local length    = self:GetPoleLength(tr,poledepth)
@@ -304,10 +304,10 @@ function TOOL:LeftClick(tr)
     end
     return false
   elseif(trEnt) then
-    local trPos    = trEnt:GetPos()
-    local trAng    = trEnt:GetAngles()
-    local trModel  = trEnt:GetModel()
-    local trClass  = trEnt:GetClass()
+    local trPos   = trEnt:GetPos()
+    local trAng   = trEnt:GetAngles()
+    local trModel = trEnt:GetModel()
+    local trClass = trEnt:GetClass()
     if(trClass == gsFileClass) then
       -- print("Updating with ignoring the Client's model")
       -- not to displace the visual and collision models
@@ -342,7 +342,7 @@ end
 function TOOL:RightClick(tr)
   if CLIENT  then return true end
   if(not tr) then return false end
-  local trEnt = GetTracePhys(tr)
+  local trEnt = magdipoleGetTracePhys(tr)
   if(not (tr.HitWorld or trEnt)) then return false end
   local ply = self:GetOwner()
   if(trEnt) then
@@ -380,7 +380,7 @@ end
 function TOOL:Reload(tr)
   if CLIENT  then return true end
   if(not tr) then return false end
-  local trEnt = GetTracePhys(tr)
+  local trEnt = magdipoleGetTracePhys(tr)
   if(not trEnt) then return false end
   if(trEnt:GetClass() == gsFileClass) then trEnt:Remove(); return true end
   return false
@@ -389,7 +389,7 @@ end
 function TOOL:UpdateGhost(oeGhost, plPly)
   if(not (oeGhost and oeGhost:IsValid())) then return end
   local tr    = plPly:GetEyeTrace()
-  local trEnt = GetTracePhys(tr)
+  local trEnt = magdipoleGetTracePhys(tr)
   if(trEnt) then
     oeGhost:SetNoDraw(true)
   else
@@ -517,8 +517,8 @@ local gtConVarList = TOOL:BuildConVarList()
 function TOOL.BuildCPanel(CPanel)
   -- https://wiki.garrysmod.com/page/Category:DForm
   local pID = GetConVar(gsFilePrefix.."permeabil"):GetInt() -- Load last used environment ID
-        SetPermeability(pID)
-  local pPerm, pItem = GetPermeability(), nil
+        magdipoleSetPermeability(pID)
+  local pPerm, pItem = magdipoleGetPermeability(), nil
           CPanel:SetName(language.GetPhrase("tool."..gsFileName..".name"))
   pItem = CPanel:Help   (language.GetPhrase("tool."..gsFileName..".desc"))
 
@@ -532,15 +532,14 @@ function TOOL.BuildCPanel(CPanel)
   pItem:SetTooltip       (language.GetPhrase( "tool."..gsFileName..".permeabil"))
   pItem:SetValue         (pPerm and pPerm[1] or language.GetPhrase( "tool."..gsFileName..".permeabil_def"))
   pID   = 1 -- Start from the beginning when creating the panel
-  pPerm = GetPermeabilityID(pID)
+  pPerm = magdipoleGetPermeabilityID(pID)
   while(pPerm) do
-    pItem:AddChoice(pPerm[1], pID)
-    pID   = pID + 1
-    pPerm = GetPermeabilityID(pID)
+    pItem:AddChoice(pPerm[1], pID); pID = pID + 1
+    pPerm = magdipoleGetPermeabilityID(pID)
   end
   pItem.OnSelect = function(pnSelf, nInd, sVal, anyData)
     RunConsoleCommand(gsFilePrefix.."permeabil", sVal)
-    SetPermeability(sVal) -- Store environment ID to the CVAR
+    magdipoleSetPermeability(sVal) -- Store environment ID to the CVAR
   end
 
   pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".strength_con"), gsFilePrefix.."strength", 1, gnMaxStrength, 3)

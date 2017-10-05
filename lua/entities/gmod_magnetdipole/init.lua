@@ -20,7 +20,7 @@ include('shared.lua')
 -- Source: https://en.wikipedia.org/wiki/Force_between_magnets#Gilbert_Model
 -- Inform: Force between two magnetic poles ( Because they are indeed poles )
 --[[
-       F---- Gmod does not have that ... GetPermeability()
+       F---- Gmod does not have that ... magdipoleGetPermeability()
        |
        V
 F = ( miu * Strength_1 * Strength_2 ) / ( 4 * PI * R^2 )
@@ -30,6 +30,18 @@ F = ( miu * Strength_1 * Strength_2 ) / ( 4 * PI * R^2 )
 ]]
 
 function ENT:Initialize()
+  self.mnStrength = 0
+  self.mnDampVel  = 0
+  self.mnDampRot  = 0
+  self.mnSearRad  = 0
+  self.mnLength   = 0
+  self.mnPoleDirX = 0
+  self.mnPoleDirY = 0
+  self.mnPoleDirZ = 0
+  self.mnFoundCnt = 0
+  self.mtFoundArr = {}
+  self.mbEnIOther = false
+  self.mbOnState  = false
   self:PhysicsInit(SOLID_VPHYSICS)
   self:SetSolid(SOLID_VPHYSICS)
   self:SetMoveType(MOVETYPE_VPHYSICS)
@@ -49,7 +61,7 @@ function ENT:Initialize()
       " Angular damping of the PhysObj ",
       " Para/Dia magnetism enabled ",
       " Material configuration enabled ",
-      " Distance from centre to any pole ",
+      " Distance from center to any pole ",
       " Dipole search radius ",
       " Local vector of the South pole "
     });
@@ -69,19 +81,6 @@ function ENT:Initialize()
     });
   end
 end
-
-ENT.mnStrength = 0
-ENT.mnDampVel  = 0
-ENT.mnDampRot  = 0
-ENT.mnSearRad  = 0
-ENT.mnLength   = 0
-ENT.mnPoleDirX = 0
-ENT.mnPoleDirY = 0
-ENT.mnPoleDirZ = 0
-ENT.mnFoundCnt = 0
-ENT.mtFoundArr = {}
-ENT.mbEnIOther = false
-ENT.mbOnState  = false
 
 function ENT:Think()
   local NextTime  = CurTime() + 0.01
@@ -124,7 +123,7 @@ function ENT:Think()
     self:SetPoleDirectionLocal(wPoleDirection[1], wPoleDirection[2], wPoleDirection[3])
   end
   local Flag = self:GetNWBool(MineClass.."_pro_en")
-  if(Flag) then -- Update Baloon if enabled to save communication
+  if(Flag) then -- Update Balloon if enabled to save communication
     self:SetNWString(MineClass.."_pro_tx",self:GetMagnetOverlayText())
   end
   local Phys = self:GetPhysicsObject()
@@ -154,7 +153,7 @@ function ENT:Think()
                 local OtherCenter = Other:GetMagnetCenter()
                 local OtherSouth  = Other:GetSouthPosOrigin(OtherCenter)
                 local OtherNorth  = Other:GetNorthPosOrigin(OtherCenter)
-                local Gain = 100000 * ((Other:GetStrength() * self:GetStrength() * GetPermeability()[2]) / (4 * math.pi))
+                local Gain = 100000 * ((Other:GetStrength() * self:GetStrength() * magdipoleGetPermeability()[2]) / (4 * math.pi))
                 --- Repel   Mine South [ MineS - OtherS ] -- MagnitudePole(vDir, vSet, vSub, nGain)
                 self:MagnitudePole(dirSS, MineSouth, OtherSouth,  Gain); vForceS:Add(dirSS)
                 --- Attract Mine South [ MineS - OtherN ]
@@ -165,7 +164,7 @@ function ENT:Think()
                 self:MagnitudePole(dirNN, MineNorth, OtherNorth,  Gain); vForceN:Add(dirNN)
                 self:AddDiscovery(Other)
               elseif(InterOth and OtherClass == "prop_physics") then
-                local Gain = 100000 * ((self:GetStrength() * GetMaterialGain(Other) * GetPermeability()[2]) / (4 * math.pi))
+                local Gain = 100000 * ((self:GetStrength() * magdipoleGetMaterialGain(Other) * magdipoleGetPermeability()[2]) / (4 * math.pi))
                 local OtherCenter = Other:LocalToWorld(Other:OBBCenter())
                 --- South pole
                 self:MagnitudePole(dirSS, MineSouth, OtherCenter, -Gain); vForceS:Add(dirSS)

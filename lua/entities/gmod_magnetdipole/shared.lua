@@ -5,7 +5,7 @@
 ]]--
 
 --Extracts valid physObj ENT from trace
-function GetTracePhys(oTrace)
+function magdipoleGetTracePhys(oTrace)
   if(not oTrace) then return nil end      -- Duhh ...
   if(not oTrace.Hit ) then return nil end -- Did not hit anything
   if(oTrace.HitWorld) then return nil end -- It's not Entity
@@ -22,51 +22,13 @@ function GetTracePhys(oTrace)
   return nil -- Some other kind of ENT
 end
 
-function RoundValue(exact, frac)
+function magdipoleRoundValue(exact, frac)
   local q,f = math.modf(exact/frac)
   return frac * (q + (f > 0.5 and 1 or 0))
 end
 
---Prints everything
-function Print(tT,sS)
-  if(not IsExistent(tT)) then
-    return StatusLog(nil,"Print: {nil, name="..tostring(sS or "\"Data\"").."}") end
-  local S = type(sS)
-  local T = type(tT)
-  local Key = ""
-  if    (S == "string") then S = sS
-  elseif(S == "number") then S = tostring(sS)
-  else                       S = "Data" end
-  if(T ~= "table") then
-    LogInstance("{"..T.."}["..tostring(sS or "N/A").."] = "..tostring(tT))
-    return
-  end
-  T = tT
-  if(next(T) == nil) then
-    LogInstance(S.." = {}")
-    return
-  end
-  LogInstance(S)
-  for k,v in pairs(T) do
-    if(type(k) == "string") then
-      Key = S.."[\""..k.."\"]"
-    else
-      Key = S.."["..tostring(k).."]"
-    end
-    if(type(v) ~= "table") then
-      if(type(v) == "string") then
-        LogInstance(Key.." = \""..v.."\"")
-      else
-        LogInstance(Key.." = "..tostring(v))
-      end
-    else
-      Print(v,Key)
-    end
-  end
-end
-
 -- Converts a string to a program-valid model
-function MagnetDipoleModel(sStr)
+function magdipoleConvertModel(sStr)
   if(not sStr) then return "null" end
   if(sStr == "") then return "null" end
   if(sStr == "null") then return "null" end
@@ -101,13 +63,14 @@ local MaterialGain =
   [MAT_DEFAULT    ] =  0.00001,
   [MAT_WARPSHIELD ] =  0.55000
 }
-function GetMaterialGain(oEnt)
+
+function magdipoleGetMaterialGain(oEnt)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
   local Enum = oEnt:GetMaterialType() -- https://wiki.garrysmod.com/page/Enums/MAT
   return (MaterialGain[Enum] or 0)
 end
 
-local Permeability = -- Environment # Permeability # Relative permeability
+local magdipolePermeability = -- Environment # Permeability # Relative permeability
 { -- https://en.wikipedia.org/wiki/Permeability_(electromagnetism)#Values_for_some_common_materials
   Now = 23, -- Default is air
   { "Metglas 2714A (annealed)"     , 1.2600000000000000 , 1002676.141507600000000 },
@@ -143,21 +106,23 @@ local Permeability = -- Environment # Permeability # Relative permeability
   { "Bismuth"                      , 0.0000012564300000 ,       0.999835225773328 },
   { "Superconductor"               , 0.0000000000000000 ,       0.000000000000000 }
 }
-function GetPermeabilityID(nID)
-  local ID = (tonumber(nID) or 0)
-  return Permeability[ID]
+function magdipoleGetPermeabilityID(nID)
+  local PB = magdipolePermeability
+  local ID = (tonumber(nID) or 0); return PB[ID]
 end
 
-function GetPermeability()
-  return GetPermeabilityID(Permeability.Now)
+function magdipoleGetPermeability()
+  local PB = magdipolePermeability
+  return magdipoleGetPermeabilityID(PB.Now)
 end
 
-function SetPermeability(nID)
-  local ID = (tonumber(nID) or 0)
-  if(ID < 1) then Permeability.Now = 1; return end
-  local Max = #Permeability
-  if(ID > Max) then Permeability.Now = ID % Max; return end
-  Permeability.Now = ID
+function magdipoleSetPermeability(nID)
+  local PB = magdipolePermeability
+  local ID = math.floor(math.Clamp(tonumber(nID) or 0, 1, #PB))
+  if(ID < 1) then PB.Now = 1; return end
+  if(ID > Max) then; local Max = #PB
+    PB.Now = math.floor(ID % Max); return
+  end; PB.Now = ID
 end
 
 ENT.Type            = "anim"
@@ -172,6 +137,11 @@ ENT.Author          = "dvd_video"
 ENT.Contact         = "dvd_video@abv.bg"
 ENT.Spawnable       = false
 ENT.AdminSpawnable  = false
+
+function ENT:GetMaterialGain()
+  -- https://wiki.garrysmod.com/page/Enums/MAT
+  return (MaterialGain[self:GetMaterialType()] or 0)
+end
 
 function ENT:ClearDiscovary()
   local Arr, Cnt = self.mtFoundArr, self.mnFoundCnt
@@ -288,14 +258,14 @@ end
 function ENT:GetMagnetOverlayText()
   local PoleDir = self:GetPoleDirectionLocal()
   local Text =                 (tostring(self))..
-               "\nStrength: "..(RoundValue(self:GetStrength(),0.01) or "N/A")..
-               "\nDamping: {"..(RoundValue(self:GetDampVel(),0.01) or "N/A")..", "
-                             ..(RoundValue(self:GetDampRot(),0.01) or "N/A").."}"..
-                 "\nLength: "..(RoundValue(self:GetPoleLength(),0.01) or "N/A")..
-                 "\nRadius: "..(RoundValue(self:GetSearchRadius(),0.01) or "N/A")..
-               "\nPoledir: {"..(RoundValue(PoleDir[1], 0.001) or "N")..", "
-                             ..(RoundValue(PoleDir[2], 0.001) or "N")..", "
-                             ..(RoundValue(PoleDir[3], 0.001) or "N").."}"..
+               "\nStrength: "..(magdipoleRoundValue(self:GetStrength(),0.01) or "N/A")..
+               "\nDamping: {"..(magdipoleRoundValue(self:GetDampVel(),0.01) or "N/A")..", "
+                             ..(magdipoleRoundValue(self:GetDampRot(),0.01) or "N/A").."}"..
+                 "\nLength: "..(magdipoleRoundValue(self:GetPoleLength(),0.01) or "N/A")..
+                 "\nRadius: "..(magdipoleRoundValue(self:GetSearchRadius(),0.01) or "N/A")..
+               "\nPoledir: {"..(magdipoleRoundValue(PoleDir[1], 0.001) or "N")..", "
+                             ..(magdipoleRoundValue(PoleDir[2], 0.001) or "N")..", "
+                             ..(magdipoleRoundValue(PoleDir[3], 0.001) or "N").."}"..
              "\nEnts found: "..(tostring(self:GetDiscoveryCount()))..
              "\nIs Working: "..(tostring(self:GetOnState()))..
         "\nEnable Para/Dia: "..(tostring(self:GetInteractOthers()))
