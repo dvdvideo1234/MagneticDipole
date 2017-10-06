@@ -2,14 +2,8 @@ local gsMeanName     = "Magnet Dipole"
 local gsFileName     = "magnetdipole"
 local gsFilePrefix   = gsFileName.."_"
 local gsFileMany     = gsFileName.."s"
-local gsFileClass    = "gmod_"..gsFileName
-local gsClassPolDirX = gsFileClass.."_pdir_x"
-local gsClassPolDirY = gsFileClass.."_pdir_y"
-local gsClassPolDirZ = gsFileClass.."_pdir_z"
-local gsClassPolLen  = gsFileClass.."_plen"
-local gsClassPrefix  = gsFileClass.."_"
-local ANG_ZERO       = Angle()
-local VEC_ZERO       = Vector()
+local gsFileClass    = magdipoleGetSentName()
+local VEC_ZERO, ANG_ZERO = magdipoleGetZeroVecAng()
 local gnNormSquared  = math.sqrt(2)
 local gnMaxPoleOffs  = 10
 local gnMaxCrossSiz  = 50
@@ -73,7 +67,7 @@ if CLIENT then
   language.Add( "tool."..gsFileName..".damprot_con"  , "Angular damping:")
   language.Add( "tool."..gsFileName..".damprot"      , "Defines how much damping the dipole will have for angular velocity")
   language.Add( "tool."..gsFileName..".length_con"   , "Pole length:")
-  language.Add( "tool."..gsFileName..".length"       , "Defines how far apart the poles are fron the center")
+  language.Add( "tool."..gsFileName..".length"       , "Defines how far apart the poles are from the center")
   language.Add( "tool."..gsFileName..".searchrad_con", "Search radius:")
   language.Add( "tool."..gsFileName..".searchrad"    , "Defines the radius of the sphere the dipole will search in")
   language.Add( "tool."..gsFileName..".offx_con"     , "OBB Offset X:")
@@ -102,7 +96,7 @@ end
 TOOL.Category   = "Construction"                -- Name of the category
 TOOL.Name       = "#tool."..gsFileName..".name" -- Name to display
 TOOL.Command    = nil                           -- Command on click (nil for default)
-TOOL.ConfigName = ""                            -- Config file name (nil for default)
+TOOL.ConfigName = ""                            -- Configuration file name (nil for default)
 
 if SERVER then
   cleanup.Register(gsFileMany)
@@ -113,9 +107,9 @@ if SERVER then
     numpad.Remove(KeyOn);
   end
 
-  function MakeMagnetDipole(ply      , pos      , ang      , key      , model    , strength ,
-                            dampvel  , damprot  , itother  , searchrad, length   ,
-                            offx     , offy     , offz     , advise   , property )
+  function MakeMagnetDipole(ply      , pos      , ang      , key      , model    ,
+                            strength , dampvel  , damprot  , itother  , searchrad,
+                            length   , voff     , advise   , property )
     if (not ply:CheckLimit(gsFileMany)) then
       return false
     end
@@ -131,8 +125,8 @@ if SERVER then
         seMag:SetNotSolid( false );
         seMag:SetPos(pos)
         seMag:SetAngles(ang)
-        seMag:Setup(strength , dampvel  , damprot  , itother  , searchrad, length   ,
-                    offx     , offy     , offz     , advise   , property)
+        seMag:Setup(strength , dampvel  , damprot  , itother  ,
+                    searchrad, length   , voff     , advise   , property)
         seMag:Spawn()
         seMag:SetPlayer(ply)
         seMag:Activate()
@@ -159,9 +153,9 @@ if SERVER then
   end
 
   duplicator.RegisterEntityClass( gsFileClass, MakeMagnetDipole,
-                                  "Pos"       , "Ang"       , "mnNumKey"  , "msModel"   , "mnStrength",
-                                  "mnDampVel" , "mnDampRot" , "mbEnIOther", "mnSearRad" , "mnLength"  ,
-                                  "mnPoleDirX", "mnPoleDirY", "mnPoleDirZ", "mbAdvise"  , "mbProperty")
+                                  "Pos"       , "Ang"       , "mnNumKey"  , "msModel"   ,
+                                  "mnStrength", "mnDampVel" , "mnDampRot" , "mbEnIOther",
+                                  "mnSearRad" , "mnLength"  , "mvDirLocal", "mbAdvise"  , "mbProperty")
 end
 
 local function PrintNotify(oPly,sText,sNotif)
@@ -240,17 +234,13 @@ function TOOL:GetOffsets(oTrace, nLen)
   local Offy = (math.Clamp(self:GetClientNumber("offy") or 0,-gnMaxPoleOffs,gnMaxPoleOffs))
   local Offz = (math.Clamp(self:GetClientNumber("offz") or 0,-gnMaxPoleOffs,gnMaxPoleOffs))
   if(Offx == 0 and Offy == 0 and Offz == 0) then
-    local trEnt = oTrace.Entity
+    local trEnt, vNorm = oTrace.Entity, oTrace.HitNormal
     if(trEnt and trEnt:IsValid()) then
-      local Len = tonumber(nLen) or 0
-      if(Len <= 0) then return 0, 0, 0 end
-      local Off = Vector()
-      Off:Set(trEnt:GetPos())
-      Off:Add(Len * oTrace.HitNormal)
-      Off:Set(trEnt:WorldToLocal(Off))
-      Offx, Offy, Offz = Off[1], Off[2], Off[3]
+      local Len = (tonumber(nLen) or 0); if(Len <= 0) then return 0, 0, 0 end
+      local vOff = Vector(); vOff:Set(trEnt:GetPos()); vOff:Add(Len * vNorm)
+      vOff:Set(trEnt:WorldToLocal(vOff)); return vOff
     end
-  end; return Offx, Offy, Offz
+  end; return Vector(Offx, Offy, Offz)
 end
 
 function TOOL:GetCrossairSize()
@@ -265,8 +255,8 @@ function TOOL:LeftClick(tr)
   local poledepth = self:GetPoleDepth()
   local length    = self:GetPoleLength(tr,poledepth)
   if(length <= 0) then return false end
-  local offx, offy, offz = self:GetOffsets(tr,length)
-  if(offx == 0 and offy == 0 and offz == 0) then return false end
+  local voff = self:GetOffsets(tr,length)
+  if(voff:Length() < magdipoleGetEpsilonZero()) then return false end
   local key       = self:GetKey()
   local ply       = self:GetOwner()
   local model     = self:GetModel()
@@ -281,9 +271,9 @@ function TOOL:LeftClick(tr)
     local Ang   = ply:GetAimVector():Angle()
           Ang.P = 0
           Ang.R = 0
-    local seMag = MakeMagnetDipole(ply      , tr.HitPos, Ang      , key      , model    , strength ,
-                                   dampvel  , damprot  , itother  , searchrad, length   ,
-                                   offx     , offy     , offz     , advise   , property )
+    local seMag = MakeMagnetDipole(ply      , tr.HitPos, Ang      , key      , model    ,
+                                   strength , dampvel  , damprot  , itother  , searchrad,
+                                   length   , voff     , advise   , property )
     if(seMag) then
       local vBBMin = seMag:OBBMins()
       local vPos = Vector(tr.HitPos[1],
@@ -311,16 +301,16 @@ function TOOL:LeftClick(tr)
     if(trClass == gsFileClass) then
       -- print("Updating with ignoring the Client's model")
       -- not to displace the visual and collision models
-      trEnt:Setup(strength , dampvel  , damprot  , itother  ,searchrad, length   ,
-                  offx     , offy     , offz     , advise   , property )
+      trEnt:Setup(strength , dampvel  , damprot  , itother  ,searchrad,
+                  length   , voffx    , advise   , property )
       return true
     elseif(trClass == "prop_physics" and (model == "null" or model == trModel)) then
       -- Creating when it is a prop
       -- and the "tr" is enabled for a magnet
       -- or it is the first one created
-      local seMag = MakeMagnetDipole(ply      , trPos    , trAng    , key      , trModel  , strength ,
-                                     dampvel  , damprot  , itother  , searchrad, length   ,
-                                     offx     , offy     , offz     , advise   , property )
+      local seMag = MakeMagnetDipole(ply      , trPos    , trAng    , key      , trModel  ,
+                                     strength , dampvel  , damprot  , itother  , searchrad,
+                                     length   , voff     , advise   , property )
       if(seMag) then
         trEnt:Remove()
         ply:ConCommand(gsFilePrefix.."model " ..trModel.." \n")
@@ -358,14 +348,14 @@ function TOOL:RightClick(tr)
       ply:ConCommand(gsFilePrefix.."itother   "..((itother  and 1) or 0).." \n")
       ply:ConCommand(gsFilePrefix.."searchrad "..trEnt:GetSearchRadius().." \n")
       ply:ConCommand(gsFilePrefix.."length    "..trEnt:GetPoleLength().." \n")
-      ply:ConCommand(gsFilePrefix.."offx      "..poledir[1].." \n")
-      ply:ConCommand(gsFilePrefix.."offy      "..poledir[2].." \n")
-      ply:ConCommand(gsFilePrefix.."offz      "..poledir[3].." \n")
+      ply:ConCommand(gsFilePrefix.."offx      "..poledir.x.." \n")
+      ply:ConCommand(gsFilePrefix.."offy      "..poledir.y.." \n")
+      ply:ConCommand(gsFilePrefix.."offz      "..poledir.z.." \n")
       PrintNotify(ply,"Settings copied !","GENERIC")
       return true
     elseif(trClass == "prop_physics") then
       ply:ConCommand(gsFilePrefix.."model "..trModel.." \n")
-      PrintNotify(ply,"Model: "..string.GetFileFromFilename(trModel).." !","GENERIC")
+      PrintNotify(ply,"Model: "..(trModel):GetFileFromFilename().." !","GENERIC")
       return true
     end
     return false
@@ -454,13 +444,13 @@ end
 function TOOL:DrawHUD()
   if(SERVER) then return end
   local ply = self:GetOwner()
-  if(not ply) then return end
-  local tr  = ply:GetEyeTrace()
+  if(not (ply and ply:IsValid())) then return end
+  local tr = ply:GetEyeTrace()
   if(not tr) then return end
-  local x       = surface.ScreenWidth()  / 2
-  local y       = surface.ScreenHeight() / 2
-  local trEnt   = tr.Entity
-  local model   = self:GetModel()
+  local x = surface.ScreenWidth() / 2
+  local y = surface.ScreenHeight() / 2
+  local trEnt = tr.Entity
+  local model = self:GetModel()
   local crossiz = self:GetCrossairSize()
   local crosszd = crossiz / gnNormSquared
   if(trEnt and trEnt:IsValid()) then
@@ -469,25 +459,17 @@ function TOOL:DrawHUD()
     if(trClass == gsFileClass) then
       local adv = trEnt:GetNWBool(gsFileClass.."_adv_en")
       if(not adv) then return end
-      local trPDir = Vector(trEnt:GetNWFloat(gsClassPolDirX),
-                            trEnt:GetNWFloat(gsClassPolDirY),
-                            trEnt:GetNWFloat(gsClassPolDirZ))
-      local trLen  = trEnt:GetNWFloat(gsClassPolLen)
-      local trAng  = trEnt:GetAngles()
-      local trwCenter = trEnt:GetMagnetCenter()
-      local Pos = Vector()
-            Pos:Set(trPDir)
-            Pos:Mul(trLen)
-            Pos:Rotate(trAng)
-            Pos:Add(trwCenter)
-      local S = Pos:ToScreen()
-      local SLen = (tr.HitPos - Pos):Length() / trLen
-            Pos:Set(trPDir)
-            Pos:Rotate(trAng)
-            Pos:Mul(-trLen)
-            Pos:Add(trwCenter)
-      local N = Pos:ToScreen()
-      local NLen = (tr.HitPos - Pos):Length() / trLen
+      local trAng = trEnt:GetAngles()
+      local trLen = trEnt:GetPoleLength()
+      local trCen = trEnt:GetMagnetCenter()
+      local trDir, wPos = trEnt:GetPoleDirectionLocal(), Vector()
+      wPos:Set(trDir); wPos:Mul(trLen); wPos:Rotate(trAng); wPos:Add(trCen)
+      local S = wPos:ToScreen()
+      local SLen = (tr.HitPos - wPos):Length() / trLen
+            wPos:Set(trDir); wPos:Rotate(trAng)
+            wPos:Mul(-trLen); wPos:Add(trCen)
+      local N = wPos:ToScreen()
+      local NLen = (tr.HitPos - wPos):Length() / trLen
       local RadScale = math.Clamp(750 / (tr.HitPos - ply:GetPos()):Length(),1,100)
       surface.SetDrawColor(gtPalette.Y)
       surface.DrawLine(S.x, S.y, N.x, N.y)

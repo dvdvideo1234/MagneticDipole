@@ -3,40 +3,8 @@
  * Magnet module shared stuff
  * Location "lua/entities/gmod_magnetdipole/shared.lua"
 ]]--
-
---Extracts valid physObj ENT from trace
-function magdipoleGetTracePhys(oTrace)
-  if(not oTrace) then return nil end      -- Duhh ...
-  if(not oTrace.Hit ) then return nil end -- Did not hit anything
-  if(oTrace.HitWorld) then return nil end -- It's not Entity
-  local trEnt = oTrace.Entity
-  if(trEnt                              and
-     trEnt:IsValid()                    and
-     trEnt:GetPhysicsObject():IsValid() and not
-         ( trEnt:IsPlayer()  or
-           trEnt:IsNPC()     or
-           trEnt:IsVehicle() or
-           trEnt:IsRagdoll() or
-           trEnt:IsWidget() )
-  ) then return trEnt end  -- PhysObj ENT
-  return nil -- Some other kind of ENT
-end
-
-function magdipoleRoundValue(exact, frac)
-  local q,f = math.modf(exact/frac)
-  return frac * (q + (f > 0.5 and 1 or 0))
-end
-
--- Converts a string to a program-valid model
-function magdipoleConvertModel(sStr)
-  if(not sStr) then return "null" end
-  if(sStr == "") then return "null" end
-  if(sStr == "null") then return "null" end
-  if(not util.IsValidModel(sStr)) then return "null" end
-  if(not util.IsValidProp(sStr) ) then return "null" end
-  return sStr
-end
-
+local magdipoleSentName     = "gmod_magnetdipole"
+local magdipoleEpisilonZero = 1e-5
 local magdipoleMaterialGain =
 {
   [MAT_ALIENFLESH ] = -0.00003,
@@ -63,13 +31,6 @@ local magdipoleMaterialGain =
   [MAT_DEFAULT    ] =  0.00001,
   [MAT_WARPSHIELD ] =  0.55000
 }
-
-function magdipoleGetMaterialGain(oEnt)
-  if(not (oEnt and oEnt:IsValid())) then return 0 end
-  local MG = magdipoleMaterialGain -- https://wiki.garrysmod.com/page/Enums/MAT
-  return (MG[oEnt:GetMaterialType()] or 0)
-end
-
 local magdipolePermeability = -- Environment # Permeability # Relative permeability
 { -- https://en.wikipedia.org/wiki/Permeability_(electromagnetism)#Values_for_some_common_materials
   Now = 23, -- Default is air
@@ -106,6 +67,60 @@ local magdipolePermeability = -- Environment # Permeability # Relative permeabil
   { "Bismuth"                      , 0.0000012564300000 ,       0.999835225773328 },
   { "Superconductor"               , 0.0000000000000000 ,       0.000000000000000 }
 }
+local magdipoleVecZero   = Vector()
+local magdipoleAngZero   = Angle ()
+local magdipoleMetersGLU = 0.01905 -- Convert the [glu] length to meters
+
+function magdipoleGetSentName()
+  return magdipoleSentName end
+
+function magdipoleGetZeroVecAng()
+  return magdipoleVecZero, magdipoleAngZero end
+
+--Extracts valid physObj ENT from trace
+function magdipoleGetTracePhys(oTrace)
+  if(not oTrace) then return nil end      -- Duhh ...
+  if(not oTrace.Hit ) then return nil end -- Did not hit anything
+  if(oTrace.HitWorld) then return nil end -- It's not Entity
+  local trEnt = oTrace.Entity
+  if(trEnt                              and
+     trEnt:IsValid()                    and
+     trEnt:GetPhysicsObject():IsValid() and not
+         ( trEnt:IsPlayer()  or
+           trEnt:IsNPC()     or
+           trEnt:IsVehicle() or
+           trEnt:IsRagdoll() or
+           trEnt:IsWidget() )
+  ) then return trEnt end  -- PhysObj ENT
+  return nil -- Some other kind of ENT
+end
+
+
+function magdipoleGetEpsilonZero()
+  return magdipoleEpisilonZero
+end
+
+function magdipoleRoundValue(exact, frac)
+  local q, f = math.modf(exact/frac)
+  return frac * (q + (f > 0.5 and 1 or 0))
+end
+
+-- Converts a string to a program-valid model
+function magdipoleConvertModel(sStr)
+  if(not sStr) then return "null" end
+  if(sStr == "") then return "null" end
+  if(sStr == "null") then return "null" end
+  if(not util.IsValidModel(sStr)) then return "null" end
+  if(not util.IsValidProp(sStr) ) then return "null" end
+  return sStr
+end
+
+function magdipoleGetMaterialGain(oEnt)
+  if(not (oEnt and oEnt:IsValid())) then return 0 end
+  local MG = magdipoleMaterialGain -- https://wiki.garrysmod.com/page/Enums/MAT
+  return (MG[oEnt:GetMaterialType()] or 0)
+end
+
 function magdipoleGetPermeabilityID(nID)
   local PB = magdipolePermeability
   local ID = math.floor(math.Clamp(tonumber(nID) or 0, 1, #PB)); return PB[ID]
@@ -186,70 +201,75 @@ function ENT:SetStrength(nStr)
   if(Str and Str > 0) then self.mnStrength = Str end
 end
 
-function ENT:GetDampVel() return self.mnDampVel end
+function ENT:GetDampVel()
+  return self.mnDampVel end
 
 function ENT:SetDampVel(nDamp)
-  local nDamp = tonumber(nDamp) or 0
-  if(nDamp and nDamp > 0) then
-    self.mnDampVel = nDamp
+  local Damp = tonumber(nDamp) or 0
+  if(Damp and Damp > 0) then
+    self.mnDampVel = Damp
   end
 end
 
-function ENT:GetDampRot() return self.mnDampRot end
+function ENT:GetDampRot()
+  return self.mnDampRot end
 
 function ENT:SetDampRot(nDamp)
-  local nDamp = tonumber(nDamp) or 0
-  if(nDamp and nDamp > 0) then
-    self.mnDampRot = nDamp
+  local Damp = tonumber(nDamp) or 0
+  if(Damp and Damp > 0) then
+    self.mnDampRot = Damp
   end
 end
 
 function ENT:GetPoleDirectionLocal()
-  local Dir = Vector(self.mnPoleDirX, self.mnPoleDirY, self.mnPoleDirZ); return Dir
+  if(SERVER) then
+    return self.mvDirLocal
+  elseif(CLIENT) then
+    return self:GetNWVector(magdipoleSentName.."_pdir")
+  else return Vector() end
 end
 
-function ENT:SetPoleDirectionLocal(nX,nY,nZ)
-  local X = tonumber(nX) or 0
-  local Y = tonumber(nY) or 0
-  local Z = tonumber(nZ) or 0
-  if(X == 0 and Y == 0 and Z == 0) then
-    Z = 1 -- Default ENT's Local Z
-  end
-  local Cls = self:GetClass()
-  local Dir = Vector(X,Y,Z)
-        Dir:Normalize()
-  self.mnPoleDirX = Dir[1]
-  self.mnPoleDirY = Dir[2]
-  self.mnPoleDirZ = Dir[3]
-  self:SetNWFloat(Cls.."_pdir_x",self.mnPoleDirX)
-  self:SetNWFloat(Cls.."_pdir_y",self.mnPoleDirY)
-  self:SetNWFloat(Cls.."_pdir_z",self.mnPoleDirZ)
+function ENT:SetPoleDirectionLocal(vOff)
+   -- Default ENT's Local Z of all are zeros
+  if(vOff:Length() < magdipoleGetEpsilonZero()) then vOff.z = 1 end
+  self.mvDirLocal:Set(vOff); self.mvDirLocal:Normalize()
+  self:SetNWVector(magdipoleSentName.."_pdir",self.mvDirLocal)
 end
 
-function ENT:GetPoleLength() return self.mnLength end
+function ENT:GetPoleLength()
+  if(SERVER) then
+    return self.mnLength
+  elseif(CLIENT) then
+    return trEnt:GetNWFloat(magdipoleSentName.."_plen")
+  else return 0 end
+end
 
 function ENT:SetPoleLength(nLen)
   local Len = tonumber(nLen) or 0
   if(Len and Len > 0) then
     self.mnLength = Len
-    self:SetNWFloat(self:GetClass().."_plen",self.mnLength)
+    self:SetNWFloat(magdipoleSentName.."_plen",self.mnLength)
   end
 end
 
-function ENT:GetMagnetCenter() return self:LocalToWorld(self:OBBCenter()) end
-
-function ENT:GetSouthPosOrigin(Origin)
-  local SPos = self:GetPoleDirectionLocal()
-        SPos:Rotate(self:GetAngles())
-        SPos:Mul(self:GetPoleLength())
-  if(Origin) then SPos:Add(Origin) end; return SPos
+function ENT:GetMagnetCenter()
+  return self:LocalToWorld(self:OBBCenter())
 end
 
-function ENT:GetNorthPosOrigin(Origin)
-  local NPos = self:GetPoleDirectionLocal()
+function ENT:GetSouthPosOrigin(vOrg)
+  local SPos = self.mvPosS
+        SPos:Set(self:GetPoleDirectionLocal())
+        SPos:Rotate(self:GetAngles())
+        SPos:Mul(self:GetPoleLength())
+  if(vOrg) then SPos:Add(vOrg) end; return SPos
+end
+
+function ENT:GetNorthPosOrigin(vOrg)
+  local NPos = self.mvPosN
+        NPos:Set(self:GetPoleDirectionLocal())
         NPos:Rotate(self:GetAngles())
         NPos:Mul(-self:GetPoleLength())
-  if(Origin) then NPos:Add(Origin) end; return NPos
+  if(vOrg) then NPos:Add(vOrg) end; return NPos
 end
 
 function ENT:GetMagnetOverlayText()
@@ -260,45 +280,41 @@ function ENT:GetMagnetOverlayText()
                              ..(magdipoleRoundValue(self:GetDampRot(),0.01) or "N/A").."}"..
                  "\nLength: "..(magdipoleRoundValue(self:GetPoleLength(),0.01) or "N/A")..
                  "\nRadius: "..(magdipoleRoundValue(self:GetSearchRadius(),0.01) or "N/A")..
-               "\nPoledir: {"..(magdipoleRoundValue(PoleDir[1], 0.001) or "N")..", "
-                             ..(magdipoleRoundValue(PoleDir[2], 0.001) or "N")..", "
-                             ..(magdipoleRoundValue(PoleDir[3], 0.001) or "N").."}"..
+               "\nPoledir: {"..(magdipoleRoundValue(PoleDir.x, 0.001) or "N")..", "
+                             ..(magdipoleRoundValue(PoleDir.y, 0.001) or "N")..", "
+                             ..(magdipoleRoundValue(PoleDir.z, 0.001) or "N").."}"..
              "\nEnts found: "..(tostring(self:GetDiscoveryCount()))..
              "\nIs Working: "..(tostring(self:GetOnState()))..
         "\nEnable Para/Dia: "..(tostring(self:GetInteractOthers()))
   return Text
 end
 
-function ENT:Setup(strength , dampvel  , damprot  , itother  , searchrad, length   ,
-                   offx     , offy     , offz     , advise   , property )
-  local Class = self:GetClass()
-  if(Class == "gmod_magnetdipole") then
+function ENT:Setup(strength , dampvel  , damprot  , itother  ,
+                   searchrad, length   , voffx    , advise   , property )
+  if(self:GetClass() == magdipoleSentName) then
     self:SetSearchRadius(searchrad)
     self:SetStrength(strength)
     self:SetDampVel(dampvel)
     self:SetDampRot(damprot)
     self:SetInteractOthers(itother)
     self:SetPoleLength(length)
-    self:SetPoleDirectionLocal(offx,offy,offz)
-    self:SetNWBool(Class.."_adv_en",advise)
-    self:SetNWBool(Class.."_pro_en",property)
+    self:SetPoleDirectionLocal(voff)
+    self:SetNWBool(magdipoleSentName.."_adv_en",advise)
+    self:SetNWBool(magdipoleSentName.."_pro_en",property)
     if(property) then
-      self:SetNWString(Class.."_pro_tx",self:GetMagnetOverlayText())
+      self:SetNWString(magdipoleSentName.."_pro_tx",self:GetMagnetOverlayText())
     end
   end
 end
 
-local magdipoleVecZero = Vector()
 function ENT:ResetForce()
-  local mForces = self.mForces
-  mForces.vForceS:Set(magdipoleVecZero)
-  mForces.vForceN:Set(magdipoleVecZero)
-  mForces.vDrTemp:Set(magdipoleVecZero)
+  self.vForceS:Set(magdipoleVecZero)
+  self.vForceN:Set(magdipoleVecZero)
+  return self.vForceS, self.vForceN
 end
 
-local magdipoleMetersGLU = 0.01905 -- Convert the length to meters
 function ENT:MagnitudePole(vFor, vSet, vSub, nGain)
-  local vDir = self.mForces.vDrTemp; vDir:Set(vSet); vDir:Sub(vSub)
+  local vDir = self.mvDummy; vDir:Set(vSet); vDir:Sub(vSub)
   local nMag = (magdipoleMetersGLU * vDir:Length()); nMag = (nGain / ( nMag * nMag ))
   vDir:Normalize(); vDir:Mul(nMag); vFor:Add(vDir)
 end
