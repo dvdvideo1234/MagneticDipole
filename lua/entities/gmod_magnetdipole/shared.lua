@@ -3,8 +3,8 @@
  * Magnet module shared stuff
  * Location "lua/entities/gmod_magnetdipole/shared.lua"
 ]]--
-local magdipoleSentName     = "gmod_magnetdipole"
-local magdipoleEpisilonZero = 1e-5
+print("magdipole: Shared 1: "..os.date().." <"..SysTime()..">")
+
 local magdipoleMaterialGain =
 {
   [MAT_ALIENFLESH ] = -0.00003,
@@ -67,9 +67,15 @@ local magdipolePermeability = -- Environment # Permeability # Relative permeabil
   { "Bismuth"                      , 0.0000012564300000 ,       0.999835225773328 },
   { "Superconductor"               , 0.0000000000000000 ,       0.000000000000000 }
 }
-local magdipoleVecZero   = Vector()
-local magdipoleAngZero   = Angle ()
-local magdipoleMetersGLU = 0.01905 -- Convert the [glu] length to meters
+local magdipoleVecZero      = Vector()
+local magdipoleAngZero      = Angle ()
+local magdipoleMetersGLU    = 0.01905 -- Convert the [glu] length to meters
+local magdipoleNullModel    = "null"
+local magdipoleSentName     = "gmod_magnetdipole"
+local magdipoleEpisilonZero = 1e-5
+
+function magdipoleGetNullModel()
+  return magdipoleNullModel end
 
 function magdipoleGetSentName()
   return magdipoleSentName end
@@ -95,7 +101,6 @@ function magdipoleGetTracePhys(oTrace)
   return nil -- Some other kind of ENT
 end
 
-
 function magdipoleGetEpsilonZero()
   return magdipoleEpisilonZero
 end
@@ -106,12 +111,12 @@ function magdipoleRoundValue(exact, frac)
 end
 
 -- Converts a string to a program-valid model
-function magdipoleConvertModel(sStr)
-  if(not sStr) then return "null" end
-  if(sStr == "") then return "null" end
-  if(sStr == "null") then return "null" end
-  if(not util.IsValidModel(sStr)) then return "null" end
-  if(not util.IsValidProp(sStr) ) then return "null" end
+function magdipoleConvertModel(vMod)
+  local sStr = tostring(vMod or "")
+  if(sStr == "") then return magdipoleNullModel end
+  if(sStr == magdipoleNullModel) then return magdipoleNullModel end
+  if(not util.IsValidModel(sStr)) then return magdipoleNullModel end
+  if(not util.IsValidProp(sStr) ) then return magdipoleNullModel end
   return sStr
 end
 
@@ -119,6 +124,10 @@ function magdipoleGetMaterialGain(oEnt)
   if(not (oEnt and oEnt:IsValid())) then return 0 end
   local MG = magdipoleMaterialGain -- https://wiki.garrysmod.com/page/Enums/MAT
   return (MG[oEnt:GetMaterialType()] or 0)
+end
+
+function magdipoleGetPermeabilityCnt()
+  return #magdipolePermeability
 end
 
 function magdipoleGetPermeabilityID(nID)
@@ -131,7 +140,7 @@ function magdipoleGetPermeability()
   return magdipoleGetPermeabilityID(PB.Now)
 end
 
-function magdipoleSetPermeability(nID)
+function magdipoleSetPermeabilityID(nID)
   local PB = magdipolePermeability
   PB.Now = math.floor(math.Clamp(tonumber(nID) or 0, 1, #PB))
 end
@@ -240,7 +249,7 @@ function ENT:GetPoleLength()
   if(SERVER) then
     return self.mnLength
   elseif(CLIENT) then
-    return trEnt:GetNWFloat(magdipoleSentName.."_plen")
+    return self:GetNWFloat(magdipoleSentName.."_plen")
   else return 0 end
 end
 
@@ -290,7 +299,7 @@ function ENT:GetMagnetOverlayText()
 end
 
 function ENT:Setup(strength , dampvel  , damprot  , itother  ,
-                   searchrad, length   , voffx    , advise   , property )
+                   searchrad, length   , voff     , advise   , property )
   if(self:GetClass() == magdipoleSentName) then
     self:SetSearchRadius(searchrad)
     self:SetStrength(strength)
@@ -308,9 +317,9 @@ function ENT:Setup(strength , dampvel  , damprot  , itother  ,
 end
 
 function ENT:ResetForce()
-  self.vForceS:Set(magdipoleVecZero)
-  self.vForceN:Set(magdipoleVecZero)
-  return self.vForceS, self.vForceN
+  self.mvForceS:Set(magdipoleVecZero)
+  self.mvForceN:Set(magdipoleVecZero)
+  return self.mvForceS, self.mvForceN
 end
 
 function ENT:MagnitudePole(vFor, vSet, vSub, nGain)
@@ -318,3 +327,5 @@ function ENT:MagnitudePole(vFor, vSet, vSub, nGain)
   local nMag = (magdipoleMetersGLU * vDir:Length()); nMag = (nGain / ( nMag * nMag ))
   vDir:Normalize(); vDir:Mul(nMag); vFor:Add(vDir)
 end
+
+print("magdipole: Shared 2: "..os.date().." <"..SysTime()..">")

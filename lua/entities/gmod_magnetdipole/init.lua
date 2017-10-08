@@ -150,9 +150,9 @@ function ENT:Think()
     if(DamVel >= 0 and DamRot >= 0) then
       minePhys:SetDamping(DamVel, DamRot)
     end
-    if(SearchRad > 0) then
+    if(mineRad > 0) then
       self:ClearDiscovary()
-      local tFound = ents.FindInSphere(mineCen, SearchRad)
+      local tFound = ents.FindInSphere(mineCen, mineRad)
       if(tFound) then
         local vForceS, vForceN = self:ResetForce()
         for _, they in ipairs(tFound) do

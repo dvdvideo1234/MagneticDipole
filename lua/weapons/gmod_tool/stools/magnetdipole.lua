@@ -1,9 +1,12 @@
+print("magdipole: TOOL 1: "..os.date().." <"..SysTime()..">")
+
 local gsMeanName     = "Magnet Dipole"
 local gsFileName     = "magnetdipole"
 local gsFilePrefix   = gsFileName.."_"
 local gsFileMany     = gsFileName.."s"
-local gsFileClass    = magdipoleGetSentName()
-local VEC_ZERO, ANG_ZERO = magdipoleGetZeroVecAng()
+local gsFileClass    = magdipoleGetSentName and magdipoleGetSentName()
+local gsNullModel    = magdipoleGetNullModel and magdipoleGetNullModel()
+local VEC_ZERO, ANG_ZERO = Vector(), Angle()
 local gnNormSquared  = math.sqrt(2)
 local gnMaxPoleOffs  = 10
 local gnMaxCrossSiz  = 50
@@ -35,7 +38,7 @@ TOOL.ClientConVar =
   [ "crossiz" ]   = "10"  ,
   [ "length" ]    = "20"  ,
   [ "advise" ]    = "1"   , -- Advisor
-  [ "model" ]     = "null", -- models/props_c17/oildrum001.mdl
+  [ "model" ]     = gsNullModel, -- models/props_c17/oildrum001.mdl
   [ "offx" ]      = "0"   ,
   [ "offy" ]      = "0"   ,
   [ "offz" ]      = "0"   ,
@@ -113,7 +116,7 @@ if SERVER then
     if (not ply:CheckLimit(gsFileMany)) then
       return false
     end
-    if(model ~= "null") then -- <-- You never know .. ^_^
+    if(model ~= gsNullModel) then -- <-- You never know .. ^_^
       -- Actually model handling is done by:
       -- /gmod_magnetdipole/shared.lua -> magdipoleConvertModel(sModel)
       local seMag = ents.Create(gsFileClass)
@@ -125,15 +128,15 @@ if SERVER then
         seMag:SetNotSolid( false );
         seMag:SetPos(pos)
         seMag:SetAngles(ang)
+        seMag:Spawn()
         seMag:Setup(strength , dampvel  , damprot  , itother  ,
                     searchrad, length   , voff     , advise   , property)
-        seMag:Spawn()
         seMag:SetPlayer(ply)
         seMag:Activate()
         seMag:SetColor(gtPalette.W)
         seMag:SetRenderMode(RENDERMODE_TRANSALPHA)
-        seMag:CallOnRemove(gsClassPrefix.."numpad_cleanup", onMagnetDipoleRemove,
-        numpad.OnDown(ply, key, gsClassPrefix.."toggle_state", seMag ) )
+        seMag:CallOnRemove(gsFileClass.."_numpad_cleanup", onMagnetDipoleRemove,
+        numpad.OnDown(ply, key, gsFileClass.."_toggle_state", seMag ) )
         seMag:DrawShadow( true )
         seMag:PhysWake()
         local phPhys = seMag:GetPhysicsObject()
@@ -166,12 +169,8 @@ local function PrintNotify(oPly,sText,sNotif)
   end
 end
 
-function TOOL:GetStrength()
-  return (math.Clamp(self:GetClientNumber("strength") or 1,1,gnMaxStrength))
-end
-
 function TOOL:GetModel()
-  return (magdipoleConvertModel(string.lower(self:GetClientInfo("model"))) or "null")
+  return (magdipoleConvertModel(string.lower(self:GetClientInfo("model"))) or gsNullModel)
 end
 
 function TOOL:GetStrength()
@@ -267,7 +266,7 @@ function TOOL:LeftClick(tr)
   local property  = self:GetEnProperty()
   local strength  = self:GetStrength()
   local searchrad = self:GetSearchRadius()
-  if(tr.HitWorld and model ~= "null") then -- Spawn it on world...
+  if(tr.HitWorld and model ~= gsNullModel) then -- Spawn it on world...
     local Ang   = ply:GetAimVector():Angle()
           Ang.P = 0
           Ang.R = 0
@@ -302,9 +301,9 @@ function TOOL:LeftClick(tr)
       -- print("Updating with ignoring the Client's model")
       -- not to displace the visual and collision models
       trEnt:Setup(strength , dampvel  , damprot  , itother  ,searchrad,
-                  length   , voffx    , advise   , property )
+                  length   , voff     , advise   , property )
       return true
-    elseif(trClass == "prop_physics" and (model == "null" or model == trModel)) then
+    elseif(trClass == "prop_physics" and (model == gsNullModel or model == trModel)) then
       -- Creating when it is a prop
       -- and the "tr" is enabled for a magnet
       -- or it is the first one created
@@ -360,7 +359,7 @@ function TOOL:RightClick(tr)
     end
     return false
   elseif(tr.HitWorld) then
-    ply:ConCommand(gsFilePrefix.."model null \n")
+    ply:ConCommand(gsFilePrefix.."model "..gsNullModel.." \n")
     PrintNotify(ply,"Model cleared !","GENERIC")
     return true
   end
@@ -393,29 +392,23 @@ function TOOL:UpdateGhost(oeGhost, plPly)
   end
 end
 
+local test = true
 function TOOL:Think()
-  if (SERVER and !game.SinglePlayer()) then return end
-  if (CLIENT and  game.SinglePlayer()) then return end
   local model = self:GetModel()
-  local engho = self:GetEnGhost()
-  if (not ( model ~= "null" and
-            self.GhostEntity and
-            self.GhostEntity:IsValid() and
-            self.GhostEntity:GetModel() == model )
-      and engho
-  ) then
-    self:MakeGhostEntity(model, VEC_ZERO, ANG_ZERO)
-  end
-  if(self.GhostEntity and self.GhostEntity:IsValid()) then
-    if(engho) then
-      self:UpdateGhost(self.GhostEntity, self:GetOwner())
+  if(util.IsValidModel(model)) then
+    local ply = self:GetOwner()
+    local gho = self.GhostEntity
+    if(self:GetEnGhost()) then
+      if (not (gho and gho:IsValid() and gho:GetModel() == model and model ~= gsNullModel)) then
+        self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO); gho = self.GhostEntity
+      end; self:UpdateGhost(gho, ply)
     else
-      self.GhostEntity:Remove()
+      self:ReleaseGhostEntity()
+      if(gho and gho:IsValid()) then gho:Remove() end
     end
-  else
-    self.GhostEntity = nil
   end
 end
+
 
 function SetModelColor(trModel,sModel)
   if(sModel) then
@@ -423,14 +416,14 @@ function SetModelColor(trModel,sModel)
       if(trModel == sModel) then
         surface.SetDrawColor(gtPalette.G)
       else
-        if(sModel == "null") then
+        if(sModel == gsNullModel) then
           surface.SetDrawColor(gtPalette.C)
         else
           surface.SetDrawColor(gtPalette.Y)
         end
       end
     else
-      if(sModel == "null") then
+      if(sModel == gsNullModel) then
         surface.SetDrawColor(gtPalette.C)
       else
         surface.SetDrawColor(gtPalette.G)
@@ -497,9 +490,10 @@ end
 
 local gtConVarList = TOOL:BuildConVarList()
 function TOOL.BuildCPanel(CPanel)
+  print("magdipole: Panel 1: "..os.date().." <"..SysTime()..">")
   -- https://wiki.garrysmod.com/page/Category:DForm
   local pID = GetConVar(gsFilePrefix.."permeabil"):GetInt() -- Load last used environment ID
-        magdipoleSetPermeability(pID)
+        magdipoleSetPermeabilityID(pID)
   local pPerm, pItem = magdipoleGetPermeability(), nil
           CPanel:SetName(language.GetPhrase("tool."..gsFileName..".name"))
   pItem = CPanel:Help   (language.GetPhrase("tool."..gsFileName..".desc"))
@@ -513,15 +507,16 @@ function TOOL.BuildCPanel(CPanel)
   pItem = CPanel:ComboBox(language.GetPhrase( "tool."..gsFileName..".permeabil_con"), "permeabil")
   pItem:SetTooltip       (language.GetPhrase( "tool."..gsFileName..".permeabil"))
   pItem:SetValue         (pPerm and pPerm[1] or language.GetPhrase( "tool."..gsFileName..".permeabil_def"))
-  pID   = 1 -- Start from the beginning when creating the panel
+  pID, pMax = 1, magdipoleGetPermeabilityCnt() -- Start from the beginning when creating the panel
   pPerm = magdipoleGetPermeabilityID(pID)
-  while(pPerm) do
+  while(pID <= pMax) do
+    print("magdipole: Panel ID: "..tostring(pPerm and pPerm[1]))
     pItem:AddChoice(pPerm[1], pID); pID = pID + 1
     pPerm = magdipoleGetPermeabilityID(pID)
   end
   pItem.OnSelect = function(pnSelf, nInd, sVal, anyData)
     RunConsoleCommand(gsFilePrefix.."permeabil", sVal)
-    magdipoleSetPermeability(sVal) -- Store environment ID to the CVAR
+    magdipoleSetPermeabilityID(sVal) -- Store environment ID to the CVAR
   end
 
   pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".strength_con"), gsFilePrefix.."strength", 1, gnMaxStrength, 3)
@@ -556,4 +551,7 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".advise"))
   pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".property_con"), gsFilePrefix.."property")
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".property"))
+  print("magdipole: Panel 2: "..os.date().." <"..SysTime()..">")
 end
+
+print("magdipole: TOOL 2: "..os.date().." <"..SysTime()..">")
