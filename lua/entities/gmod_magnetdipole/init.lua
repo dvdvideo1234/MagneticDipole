@@ -128,11 +128,11 @@ function ENT:Think()
   -- If on by wire do not turn off by numpad...
   local enOn = magdipoleSelect((wPowerOn ~= nil), (wPowerOn ~= 0), self:GetOnState())
   -- Assert parameters Wire/Numpad
-  if(wDampVel   and wDampVel   > 0) then self:SetDampVel(wDampVel)   end
-  if(wDampRot   and wDampRot   > 0) then self:SetDampRot(wDampRot)   end
-  if(wStrength  and wStrength  > 0) then self:SetStrength(wStrength) end
-  if(wLength    and wLength    > 0) then self:SetPoleLength(wLength) end
-  if(wSearchRad and wSearchRad > 0) then self:SetSearchRadius(wSearchRad) end
+  if(wDampVel   and wDampVel   >= 0) then self:SetDampVel(wDampVel)   end
+  if(wDampRot   and wDampRot   >= 0) then self:SetDampRot(wDampRot)   end
+  if(wStrength  and wStrength  >= 0) then self:SetStrength(wStrength) end
+  if(wLength    and wLength    >  0) then self:SetPoleLength(wLength) end
+  if(wSearchRad and wSearchRad >  0) then self:SetSearchRadius(wSearchRad) end
   if(wEnIterOther and wEnIterOther ~= 0) then
     self:SetInteractOthers(wEnIterOther) end
   if(wPoleDirection and wPoleDirection:Length() > 0) then
@@ -144,14 +144,14 @@ function ENT:Think()
   if(minePhys and minePhys:IsValid() and enOn) then
     local isMoved = minePhys:IsMotionEnabled()
     local inteOth = self:GetInteractOthers()
-    local DamVel  = self:GetDampVel()
-    local DamRot  = self:GetDampRot()
+    local damVel  = self:GetDampVel()
+    local damRot  = self:GetDampRot()
     local mineCen = self:GetMagnetCenter()
     local mineSou = self:GetSouthPosOrigin(mineCen)
     local mineNor = self:GetNorthPosOrigin(mineCen)
     local mineRad = self:GetSearchRadius()
-    if(DamVel >= 0 and DamRot >= 0) then
-      minePhys:SetDamping(DamVel, DamRot) end
+    if(damVel >= 0 and damRot >= 0) then
+      minePhys:SetDamping(damVel, damRot) end
     if(mineRad > 0 and isMoved) then
       self:ClearDiscovary()
       local tFound = ents.FindInSphere(mineCen, mineRad)
@@ -169,22 +169,22 @@ function ENT:Think()
                 local nGain = magdipoleGetPermeability()[2]
                       nGain = nGain * they:GetStrength() * self:GetStrength()
                       nGain = (magdipoleForceMargin * nGain) / magdipoleDenominator
-                --- Repel   Mine South [ MineS - OtherS ] -- MagnitudePole(vFrc, vSet, vSub, nGain)
-                self:MagnitudePole(vForceS, mineSou, theyNor,  nGain)
+                --- Repel   Mine South [ MineS - OtherS ]
+                self:MagnitudePole(vForceS, mineSou, theySou,  nGain)
                 --- Attract Mine South [ MineS - OtherN ]
-                self:MagnitudePole(vForceS, mineSou, theySou, -nGain)
+                self:MagnitudePole(vForceS, mineSou, theyNor, -nGain)
                 --- Attract Mine North [ MineN - OtherS ]
-                self:MagnitudePole(vForceN, mineNor, theyNor, -nGain)
+                self:MagnitudePole(vForceN, mineNor, theySou, -nGain)
                 --- Repel   Mine North [ MineN - OtherN ]
-                self:MagnitudePole(vForceN, mineNor, theySou,  nGain)
+                self:MagnitudePole(vForceN, mineNor, theyNor,  nGain)
                 self:AddDiscovery(they)
-              elseif(InterOth and theyClass == "prop_physics") then
+              elseif(inteOth and theyClass == "prop_physics") then
                 local nGain = magdipoleGetPermeability()[2]
-                      nGain = nGain * self:GetStrength() * magdipoleGetMaterialGain(they)
-                      nGain = (magdipoleForceMargin * nGain) / magdipoleDenominator
-                local OtherCenter = they:LocalToWorld(they:OBBCenter())
-                self:MagnitudePole(vForceS, mineSou, OtherCenter, -nGain) --- South pole
-                self:MagnitudePole(vForceN, mineNor, OtherCenter, -nGain) --- North Pole
+                      nGain = nGain * (self:GetStrength() * magdipoleGetMaterialGain(they)) -- Magnetised prop
+                      nGain = (nGain * magdipoleForceMargin * self:GetStrength()) / magdipoleDenominator
+                local theyCen = they:LocalToWorld(they:OBBCenter())
+                self:MagnitudePole(vForceS, mineSou, theyCen, -nGain) --- South pole
+                self:MagnitudePole(vForceN, mineNor, theyCen, -nGain) --- North Pole
                 self:AddDiscovery(they)
               end
             end

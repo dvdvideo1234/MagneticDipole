@@ -36,7 +36,7 @@ TOOL.ClientConVar =
   [ "crossiz" ]   = "10"  ,      -- Size of the aim cross
   [ "length" ]    = "20"  ,      -- Distance from the center to one of the poles
   [ "advise" ]    = "1"   ,      -- Advisor for tool trace state and pole location
-  [ "toggle" ]    = "1"          -- Toggle numpad enabled key ( def. true )
+  [ "toggle" ]    = "1"   ,      -- Toggle numpad enabled key ( def. true )
   [ "model" ]     = gsNullModel, -- models/props_c17/oildrum001.mdl
   [ "offx" ]      = "0"   ,
   [ "offy" ]      = "0"   ,
@@ -413,6 +413,8 @@ function TOOL:Think()
       self:ReleaseGhostEntity()
       if(gho and gho:IsValid()) then gho:Remove() end
     end
+  else
+    self:ReleaseGhostEntity()
   end
 end
 
