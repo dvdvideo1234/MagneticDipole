@@ -3,7 +3,6 @@
  * Magnet module shared stuff
  * Location "lua/entities/gmod_magnetdipole/shared.lua"
 ]]--
-print("magdipole: Shared 1: "..os.date().." <"..SysTime()..">")
 
 local magdipoleMaterialGain =
 {
@@ -327,5 +326,3 @@ function ENT:MagnitudePole(vFor, vSet, vSub, nGain)
   local nMag = (magdipoleMetersGLU * vDir:Length()); nMag = (nGain / ( nMag * nMag ))
   vDir:Normalize(); vDir:Mul(nMag); vFor:Add(vDir)
 end
-
-print("magdipole: Shared 2: "..os.date().." <"..SysTime()..">")

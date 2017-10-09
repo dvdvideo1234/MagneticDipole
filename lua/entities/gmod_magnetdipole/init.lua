@@ -19,8 +19,8 @@ include('shared.lua')
 
 -- Pretty much this is needed for properly calculate the force by the book
 -- I am just putting this here to avoid doing it in real-time
-local magdipoleForceMargin = 1000          -- Scale the real force to expected in source
-local magdipoleDenominator = (4 * math.pi) -- Used in the real force calculating formula
+local magdipoleForceMargin     = 1000          -- Scale the real force to expected in source
+local magdipoleDenominator     = (4 * math.pi) -- Used in the real force calculating formula
 local magdipoleGetPermeability = magdipoleGetPermeability
 local magdipoleGetMaterialGain = magdipoleGetMaterialGain
 local magdipoleSentName        = magdipoleGetSentName()
@@ -79,20 +79,33 @@ function ENT:Initialize()
       " Local vector of the South pole "
     });
     WireLib.CreateSpecialOutputs(self, {
-      "eMagnetEnt", "vForceS", "vForceN"  , "vPosC",
-      "vPosS"     , "vPosN"  , "nFoundCnt", "aFaundArr"
+      "eMagnetEnt", "vForceS", "vForceN" , "vPosC",
+      "vPosS"     , "vPosN"  , "bMoves"  , "nFoundCnt", "aFaundArr"
     }, { "ENTITY", "VECTOR", "VECTOR", "VECTOR",
-         "VECTOR", "VECTOR", "NORMAL", "ARRAY" } , {
+         "VECTOR", "VECTOR", "NORMAL", "NORMAL", "ARRAY" } , {
       " ENT of the Magnet Dipole ",
       " Force on the south pole ",
       " Force on the north pole ",
       " Position of the center ",
       " Position of the south pole ",
       " Position of the north pole ",
+      " Whenever the entity is frozen ",
       " Discovered ENTs count ",
       " Discovered ENTs array "
     });
   end
+end
+
+-- These are /WireLib/ wrappers. They are called only if wiremod is installed
+function ENT:WireRead(sName)
+  local tInput = self.Inputs[sName]; if(not tInput) then
+    ErrorNoHalt("MAGNETDIPOLE: ENT.WireRead: Input <"..tostring(sName).."> invalid"); return nil end
+  local bHook = (tInput and IsValid(tInput.Src) or false)
+  return (bHook and tInput.Value or nil) -- The value here can be anything
+end -- Returns a value if the wire input is hooked otherwise returns nil
+
+function ENT:WireWrite(sName, anyVal)
+  WireLib.TriggerOutput(self,sName,anyVal); return self
 end
 
 function ENT:Think()
@@ -101,45 +114,33 @@ function ENT:Think()
   local wPowerOn, wStrength, wDampingVel, wDampingRot
   local wEnIterOther, wLength, wSearchRad, wPoleDirection
   if(WireLib) then
-    wLength        =  self.Inputs["nLength"].Value
-    wPowerOn       = (self.Inputs["nPowerOn"].Value ~= 0)
-    wStrength      =  self.Inputs["nStrength"].Value
-    wDampingVel    =  self.Inputs["nDampingVel"].Value
-    wDampingRot    =  self.Inputs["nDampingRot"].Value
-    wEnIterOther   = (self.Inputs["nIterOthers"].Value ~= 0)
-    wSearchRad     =  self.Inputs["nSearchRad"].Value
-    wPoleDirection =  self.Inputs["vPoleDirection"].Value
+    wLength        = self:WireRead("nLength"       )
+    wPowerOn       = self:WireRead("nPowerOn"      )
+    wStrength      = self:WireRead("nStrength"     )
+    wDampingVel    = self:WireRead("nDampingVel"   )
+    wDampingRot    = self:WireRead("nDampingRot"   )
+    wEnIterOther   = self:WireRead("nIterOthers"   )
+    wSearchRad     = self:WireRead("nSearchRad"    )
+    wPoleDirection = self:WireRead("vPoleDirection")
   end
   -- If on by wire do not turn off by numpad...
-  local On = wPowerOn or self:GetOnState()
+  local On = ((wPowerOn ~= nil) and (wPowerOn ~= 0) or (self:GetOnState()))
   -- Assert parameters Wire/Numpad
-  if(wStrength and wStrength > 0) then
-    self:SetStrength(wStrength)
-  end
-  if(wDampVel and wDampVel > 0) then
-    self:SetDampVel(wDampVel)
-  end
-  if(wDampRot and wDampRot > 0) then
-    self:SetDampRot(wDampRot)
-  end
-  if(wEnIterOther) then -- Boolean
-    self:SetInteractOthers(wEnIterOther)
-  end
-  if(wLength and wLength > 0) then
-    self:SetPoleLength(wLength)
-  end
-  if(wSearchRad and wSearchRad > 0) then
-    self:SetSearchRadius(wSearchRad)
-  end
+  if(wDampVel   and wDampVel   > 0) then self:SetDampVel(wDampVel)   end
+  if(wDampRot   and wDampRot   > 0) then self:SetDampRot(wDampRot)   end
+  if(wStrength  and wStrength  > 0) then self:SetStrength(wStrength) end
+  if(wLength    and wLength    > 0) then self:SetPoleLength(wLength) end
+  if(wSearchRad and wSearchRad > 0) then self:SetSearchRadius(wSearchRad) end
+  if(wEnIterOther and wEnIterOther ~= 0) then
+    self:SetInteractOthers(wEnIterOther) end
   if(wPoleDirection and wPoleDirection:Length() > 0) then
-    self:SetPoleDirectionLocal(wPoleDirection)
-  end
-  local Flag = self:GetNWBool(MineClass.."_pro_en")
-  if(Flag) then -- Update Balloon if enabled to save communication
-    self:SetNWString(MineClass.."_pro_tx",self:GetMagnetOverlayText())
-  end
+    self:SetPoleDirectionLocal(wPoleDirection) end
+  -- Update Balloon if enabled to save communication
+  if(self:GetNWBool(MineClass.."_pro_en")) then
+    self:SetNWString(MineClass.."_pro_tx",self:GetMagnetOverlayText()) end
   local minePhys = self:GetPhysicsObject()
   if(minePhys and minePhys:IsValid() and On) then
+    local isMoved = minePhys:IsMotionEnabled()
     local inteOth = self:GetInteractOthers()
     local DamVel  = self:GetDampVel()
     local DamRot  = self:GetDampRot()
@@ -148,9 +149,8 @@ function ENT:Think()
     local mineNor = self:GetNorthPosOrigin(mineCen)
     local mineRad = self:GetSearchRadius()
     if(DamVel >= 0 and DamRot >= 0) then
-      minePhys:SetDamping(DamVel, DamRot)
-    end
-    if(mineRad > 0) then
+      minePhys:SetDamping(DamVel, DamRot) end
+    if(mineRad > 0 and isMoved) then
       self:ClearDiscovary()
       local tFound = ents.FindInSphere(mineCen, mineRad)
       if(tFound) then
@@ -167,7 +167,7 @@ function ENT:Think()
                 local nGain = magdipoleGetPermeability()[2]
                       nGain = nGain * they:GetStrength() * self:GetStrength()
                       nGain = (magdipoleForceMargin * nGain) / magdipoleDenominator
-                --- Repel   Mine South [ MineS - OtherS ] -- MagnitudePole(vDir, vSet, vSub, nGain)
+                --- Repel   Mine South [ MineS - OtherS ] -- MagnitudePole(vFrc, vSet, vSub, nGain)
                 self:MagnitudePole(vForceS, mineSou, theyNor,  nGain)
                 --- Attract Mine South [ MineS - OtherN ]
                 self:MagnitudePole(vForceS, mineSou, theySou, -nGain)
@@ -191,34 +191,22 @@ function ENT:Think()
         minePhys:ApplyForceOffset(vForceS,mineSou)
         minePhys:ApplyForceOffset(vForceN,mineNor)
         if(WireLib) then
-          WireLib.TriggerOutput(self,"vForceS",vForceS)
-          WireLib.TriggerOutput(self,"vForceN",vForceN)
-        end
+          self:WireWrite("vForceS",vForceS):WireWrite("vForceN",vForceN) end
       end
     end
-    if(WireLib) then
-      WireLib.TriggerOutput(self,"vPosS",mineSou)
-      WireLib.TriggerOutput(self,"vPosN",mineNor)
-      WireLib.TriggerOutput(self,"vPosC",mineCen)
-    end
+    if(WireLib) then self:WireWrite("vPosN",mineNor):WireWrite("vPosC",mineCen)
+      self:WireWrite("vPosS",mineSou):WireWrite("bMoves",(isMoved and 1 or 0)) end
   end
-  if(WireLib) then
-    WireLib.TriggerOutput(self,"eMagnetEnt",self)
-    WireLib.TriggerOutput(self,"nFoundCnt",self.mnFoundCnt)
-    WireLib.TriggerOutput(self,"aFaundArr",self.mtFoundArr)
-  end
-  self:NextThink(NextTime)
-  return true
+  if(WireLib) then self:WireWrite("eMagnetEnt",self)
+    self:WireWrite("nFoundCnt" ,self.mnFoundCnt):WireWrite("aFaundArr" ,self.mtFoundArr) end
+  self:NextThink(NextTime); return true
 end
 
 function MagnetDipoleToggleState(oPly, oEnt )
   if(oEnt and oEnt:IsValid() and oEnt:GetClass() == magdipoleSentName) then
     local flag = oEnt:GetOnState()
-    if(flag) then
-      oEnt:SetOnState(false)
-    else
-      oEnt:SetOnState(true)
-    end
+    if(flag) then oEnt:SetOnState(false)
+    else          oEnt:SetOnState(true) end
   end
 end
 

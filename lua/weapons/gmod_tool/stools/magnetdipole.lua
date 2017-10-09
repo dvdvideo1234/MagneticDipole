@@ -1,11 +1,9 @@
-print("magdipole: TOOL 1: "..os.date().." <"..SysTime()..">")
-
 local gsMeanName     = "Magnet Dipole"
 local gsFileName     = "magnetdipole"
 local gsFilePrefix   = gsFileName.."_"
 local gsFileMany     = gsFileName.."s"
-local gsFileClass    = magdipoleGetSentName and magdipoleGetSentName()
-local gsNullModel    = magdipoleGetNullModel and magdipoleGetNullModel()
+local gsFileClass    = "gmod_magnetdipole"
+local gsNullModel    = "null"
 local VEC_ZERO, ANG_ZERO = Vector(), Angle()
 local gnNormSquared  = math.sqrt(2)
 local gnMaxPoleOffs  = 10
@@ -26,18 +24,18 @@ local gtPalette = {
 
 TOOL.ClientConVar =
 {
-  [ "permeabil" ] = "23"  , -- Air
-  [ "searchrad" ] = "0"   ,
-  [ "poledepth" ] = "10"  , -- Default pole depth is 10% of the length
-  [ "strength" ]  = "2000", -- Magnet Strength
-  [ "property" ]  = "0"   ,
-  [ "dampvel" ]   = "100" ,
-  [ "damprot" ]   = "100" ,
-  [ "enghost" ]   = "1"   ,
-  [ "itother" ]   = "0"   ,
-  [ "crossiz" ]   = "10"  ,
-  [ "length" ]    = "20"  ,
-  [ "advise" ]    = "1"   , -- Advisor
+  [ "permeabil" ] = "23"  ,      -- Environment permeability ( def. Air )
+  [ "searchrad" ] = "0"   ,      -- Magnet search radius ( def. Non-searching )
+  [ "poledepth" ] = "10"  ,      -- Default pole depth is 10% of the length
+  [ "strength" ]  = "2000",      -- Magnet strength to repel and attract in [Am]
+  [ "property" ]  = "0"   ,      -- Enable debug balloon properties
+  [ "dampvel" ]   = "100" ,      -- Linear velocity damping
+  [ "damprot" ]   = "100" ,      -- Angular velocity damping
+  [ "enghost" ]   = "1"   ,      -- Check to enable ghosting
+  [ "itother" ]   = "0"   ,      -- Used for enable (para/dia)magnetism
+  [ "crossiz" ]   = "10"  ,      -- Size of the aim cross
+  [ "length" ]    = "20"  ,      -- Distance from the center to one of the poles
+  [ "advise" ]    = "1"   ,      -- Advisor for tool trace state and pole location
   [ "model" ]     = gsNullModel, -- models/props_c17/oildrum001.mdl
   [ "offx" ]      = "0"   ,
   [ "offy" ]      = "0"   ,
@@ -140,14 +138,13 @@ if SERVER then
         seMag:DrawShadow( true )
         seMag:PhysWake()
         local phPhys = seMag:GetPhysicsObject()
-          if(phPhys and phPhys:IsValid()) then
-            local Table = { mnNumKey = key,    msModel     = model,
-                            mbAdvise = advise, mbProperty  = property }
-            table.Merge(seMag:GetTable(),Table)
-            return seMag
-          end
-        seMag:Remove()
-        print("MAGNETDIPOLE: MakeMagnetDipole: Physics object invalid!")
+        if(phPhys and phPhys:IsValid()) then
+          local Table = { mnNumKey = key,    msModel     = model,
+                          mbAdvise = advise, mbProperty  = property }
+          table.Merge(seMag:GetTable(),Table)
+          return seMag
+        end; seMag:Remove()
+        ErrorNoHalt("MAGNETDIPOLE: MakeMagnetDipole: Physics object invalid!")
         return false
       end
       return false
@@ -298,7 +295,7 @@ function TOOL:LeftClick(tr)
     local trModel = trEnt:GetModel()
     local trClass = trEnt:GetClass()
     if(trClass == gsFileClass) then
-      -- print("Updating with ignoring the Client's model")
+      -- Updating with ignoring the Client's model
       -- not to displace the visual and collision models
       trEnt:Setup(strength , dampvel  , damprot  , itother  ,searchrad,
                   length   , voff     , advise   , property )
@@ -490,7 +487,6 @@ end
 
 local gtConVarList = TOOL:BuildConVarList()
 function TOOL.BuildCPanel(CPanel)
-  print("magdipole: Panel 1: "..os.date().." <"..SysTime()..">")
   -- https://wiki.garrysmod.com/page/Category:DForm
   local pID = GetConVar(gsFilePrefix.."permeabil"):GetInt() -- Load last used environment ID
         magdipoleSetPermeabilityID(pID)
@@ -510,7 +506,6 @@ function TOOL.BuildCPanel(CPanel)
   pID, pMax = 1, magdipoleGetPermeabilityCnt() -- Start from the beginning when creating the panel
   pPerm = magdipoleGetPermeabilityID(pID)
   while(pID <= pMax) do
-    print("magdipole: Panel ID: "..tostring(pPerm and pPerm[1]))
     pItem:AddChoice(pPerm[1], pID); pID = pID + 1
     pPerm = magdipoleGetPermeabilityID(pID)
   end
@@ -551,7 +546,4 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".advise"))
   pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".property_con"), gsFilePrefix.."property")
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".property"))
-  print("magdipole: Panel 2: "..os.date().." <"..SysTime()..">")
 end
-
-print("magdipole: TOOL 2: "..os.date().." <"..SysTime()..">")
