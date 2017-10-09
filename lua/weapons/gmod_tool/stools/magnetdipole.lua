@@ -36,6 +36,7 @@ TOOL.ClientConVar =
   [ "crossiz" ]   = "10"  ,      -- Size of the aim cross
   [ "length" ]    = "20"  ,      -- Distance from the center to one of the poles
   [ "advise" ]    = "1"   ,      -- Advisor for tool trace state and pole location
+  [ "toggle" ]    = "1"          -- Toggle numpad enabled key ( def. true )
   [ "model" ]     = gsNullModel, -- models/props_c17/oildrum001.mdl
   [ "offx" ]      = "0"   ,
   [ "offy" ]      = "0"   ,
@@ -79,6 +80,8 @@ if CLIENT then
   language.Add( "tool."..gsFileName..".offz"         , "The local magnitude pole offset Y")
   language.Add( "tool."..gsFileName..".crossiz_con"  , "Crosshair size:")
   language.Add( "tool."..gsFileName..".crossiz"      , "Defines hod big the crosshair is on aiming anywhere")
+  language.Add( "tool."..gsFileName..".toggle_con"   , "Toggle mode enabled")
+  language.Add( "tool."..gsFileName..".toggle"       , "If the toggle mode is disabled you have to hold the on key")
   language.Add( "tool."..gsFileName..".key_con"      , "Key to start on:")
   language.Add( "tool."..gsFileName..".key"          , "Defines the numpad key to be use for starting the dipole")
   language.Add( "tool."..gsFileName..".itother_con"  , "Enable para/dia magnetism")
@@ -110,7 +113,7 @@ if SERVER then
 
   function MakeMagnetDipole(ply      , pos      , ang      , key      , model    ,
                             strength , dampvel  , damprot  , itother  , searchrad,
-                            length   , voff     , advise   , property )
+                            length   , voff     , advise   , property , toggle )
     if (not ply:CheckLimit(gsFileMany)) then
       return false
     end
@@ -127,14 +130,15 @@ if SERVER then
         seMag:SetPos(pos)
         seMag:SetAngles(ang)
         seMag:Spawn()
-        seMag:Setup(strength , dampvel  , damprot  , itother  ,
-                    searchrad, length   , voff     , advise   , property)
+        seMag:Setup(strength , dampvel  , damprot  , itother  , searchrad,
+                    length   , voff     , advise   , property , toggle)
         seMag:SetPlayer(ply)
         seMag:Activate()
         seMag:SetColor(gtPalette.W)
         seMag:SetRenderMode(RENDERMODE_TRANSALPHA)
         seMag:CallOnRemove(gsFileClass.."_numpad_cleanup", onMagnetDipoleRemove,
-        numpad.OnDown(ply, key, gsFileClass.."_toggle_state", seMag ) )
+          numpad.OnDown(ply, key, gsFileClass.."_toggle_state_on" , seMag),
+          numpad.OnUp  (ply, key, gsFileClass.."_toggle_state_off", seMag))
         seMag:DrawShadow( true )
         seMag:PhysWake()
         local phPhys = seMag:GetPhysicsObject()
@@ -155,7 +159,8 @@ if SERVER then
   duplicator.RegisterEntityClass( gsFileClass, MakeMagnetDipole,
                                   "Pos"       , "Ang"       , "mnNumKey"  , "msModel"   ,
                                   "mnStrength", "mnDampVel" , "mnDampRot" , "mbEnIOther",
-                                  "mnSearRad" , "mnLength"  , "mvDirLocal", "mbAdvise"  , "mbProperty")
+                                  "mnSearRad" , "mnLength"  , "mvDirLocal", "mbAdvise"  ,
+                                  "mbProperty", "mbToggle")
 end
 
 local function PrintNotify(oPly,sText,sNotif)
@@ -188,6 +193,10 @@ end
 
 function TOOL:GetEnAdvisor()
   return ((self:GetClientNumber("advise") ~= 0) or false)
+end
+
+function TOOL:GetNumToggled()
+  return ((self:GetClientNumber("toggle") ~= 0) or false)
 end
 
 function TOOL:GetEnProperty()
@@ -257,6 +266,7 @@ function TOOL:LeftClick(tr)
   local ply       = self:GetOwner()
   local model     = self:GetModel()
   local advise    = self:GetEnAdvisor()
+  local toggle    = self:GetNumToggled()
   local dampvel   = self:GetDampVel()
   local damprot   = self:GetDampRot()
   local itother   = self:GetInteractOthers()
@@ -269,7 +279,7 @@ function TOOL:LeftClick(tr)
           Ang.R = 0
     local seMag = MakeMagnetDipole(ply      , tr.HitPos, Ang      , key      , model    ,
                                    strength , dampvel  , damprot  , itother  , searchrad,
-                                   length   , voff     , advise   , property )
+                                   length   , voff     , advise   , property , toggle )
     if(seMag) then
       local vBBMin = seMag:OBBMins()
       local vPos = Vector(tr.HitPos[1],
@@ -297,8 +307,8 @@ function TOOL:LeftClick(tr)
     if(trClass == gsFileClass) then
       -- Updating with ignoring the Client's model
       -- not to displace the visual and collision models
-      trEnt:Setup(strength , dampvel  , damprot  , itother  ,searchrad,
-                  length   , voff     , advise   , property )
+      trEnt:Setup(strength , dampvel  , damprot  , itother  , searchrad,
+                  length   , voff     , advise   , property , toggle)
       return true
     elseif(trClass == "prop_physics" and (model == gsNullModel or model == trModel)) then
       -- Creating when it is a prop
@@ -306,7 +316,7 @@ function TOOL:LeftClick(tr)
       -- or it is the first one created
       local seMag = MakeMagnetDipole(ply      , trPos    , trAng    , key      , trModel  ,
                                      strength , dampvel  , damprot  , itother  , searchrad,
-                                     length   , voff     , advise   , property )
+                                     length   , voff     , advise   , property , toggle)
       if(seMag) then
         trEnt:Remove()
         ply:ConCommand(gsFilePrefix.."model " ..trModel.." \n")
@@ -546,4 +556,6 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".advise"))
   pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".property_con"), gsFilePrefix.."property")
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".property"))
+  pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".toggle_con"), gsFilePrefix.."toggle")
+           pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".toggle"))
 end

@@ -24,6 +24,7 @@ local magdipoleDenominator     = (4 * math.pi) -- Used in the real force calcula
 local magdipoleGetPermeability = magdipoleGetPermeability
 local magdipoleGetMaterialGain = magdipoleGetMaterialGain
 local magdipoleSentName        = magdipoleGetSentName()
+local magdipoleSelect          = magdipoleSelect
 -- Source: https://en.wikipedia.org/wiki/Force_between_magnets#Gilbert_Model
 -- Inform: Force between two magnetic poles ( Because they are indeed poles )
 --[[
@@ -49,6 +50,7 @@ function ENT:Initialize()
   self.mtFoundArr = {}
   self.mbEnIOther = false
   self.mbOnState  = false
+  self.mbToggle   = true
   self.mvPosS     = Vector()
   self.mvPosN     = Vector()
   self.mvForceS   = Vector()
@@ -124,7 +126,7 @@ function ENT:Think()
     wPoleDirection = self:WireRead("vPoleDirection")
   end
   -- If on by wire do not turn off by numpad...
-  local On = (wPowerOn and (wPowerOn ~= 0) or (self:GetOnState()))
+  local enOn = magdipoleSelect((wPowerOn ~= nil), (wPowerOn ~= 0), self:GetOnState())
   -- Assert parameters Wire/Numpad
   if(wDampVel   and wDampVel   > 0) then self:SetDampVel(wDampVel)   end
   if(wDampRot   and wDampRot   > 0) then self:SetDampRot(wDampRot)   end
@@ -139,7 +141,7 @@ function ENT:Think()
   if(self:GetNWBool(MineClass.."_pro_en")) then
     self:SetNWString(MineClass.."_pro_tx",self:GetMagnetOverlayText()) end
   local minePhys = self:GetPhysicsObject()
-  if(minePhys and minePhys:IsValid() and On) then
+  if(minePhys and minePhys:IsValid() and enOn) then
     local isMoved = minePhys:IsMotionEnabled()
     local inteOth = self:GetInteractOthers()
     local DamVel  = self:GetDampVel()
@@ -202,12 +204,24 @@ function ENT:Think()
   self:NextThink(NextTime); return true
 end
 
-function MagnetDipoleToggleState(oPly, oEnt )
+function MagnetDipoleToggleStateOn(oPly, oEnt)
   if(oEnt and oEnt:IsValid() and oEnt:GetClass() == magdipoleSentName) then
-    local flag = oEnt:GetOnState()
-    if(flag) then oEnt:SetOnState(false)
-    else          oEnt:SetOnState(true) end
+    if(oEnt:GetNumToggled()) then
+      if(oEnt:GetOnState()) then oEnt:SetOnState(false)
+      else oEnt:SetOnState(true) end
+    else
+      oEnt:SetOnState(true)
+    end
   end
 end
 
-numpad.Register(magdipoleSentName.."_toggle_state", MagnetDipoleToggleState)
+function MagnetDipoleToggleStateOff(oPly, oEnt)
+  if(oEnt and oEnt:IsValid() and oEnt:GetClass() == magdipoleSentName) then
+    if(not oEnt:GetNumToggled()) then
+      oEnt:SetOnState(false)
+    end
+  end
+end
+
+numpad.Register(magdipoleSentName.."_toggle_state_on" , MagnetDipoleToggleStateOn)
+numpad.Register(magdipoleSentName.."_toggle_state_off", MagnetDipoleToggleStateOff)

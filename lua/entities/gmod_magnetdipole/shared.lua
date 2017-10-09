@@ -82,6 +82,10 @@ function magdipoleGetSentName()
 function magdipoleGetZeroVecAng()
   return magdipoleVecZero, magdipoleAngZero end
 
+function magdipoleSelect(bCnd, vT, vF)
+  if(bCnd) then return vT else return vF end
+end
+
 --Extracts valid physObj ENT from trace
 function magdipoleGetTracePhys(oTrace)
   if(not oTrace) then return nil end      -- Duhh ...
@@ -280,6 +284,19 @@ function ENT:GetNorthPosOrigin(vOrg)
   if(vOrg) then NPos:Add(vOrg) end; return NPos
 end
 
+function ENT:GetNumToggled()
+  if(SERVER) then
+    return self.mbToggle
+  elseif(CLIENT) then
+    return self:GetNWBool(magdipoleSentName.."_btog")
+  end
+end
+
+function ENT:SetNumToggled(bTog)
+  self.mbToggle = tobool(bTog)
+  self:SetNWBool(magdipoleSentName.."_btog",self.mbToggle)
+end
+
 function ENT:GetMagnetOverlayText()
   local PoleDir = self:GetPoleDirectionLocal()
   local Text =                 (tostring(self))..
@@ -292,13 +309,13 @@ function ENT:GetMagnetOverlayText()
                              ..(magdipoleRoundValue(PoleDir.y, 0.001) or "N")..", "
                              ..(magdipoleRoundValue(PoleDir.z, 0.001) or "N").."}"..
              "\nEnts found: "..(tostring(self:GetDiscoveryCount()))..
-             "\nIs Working: "..(tostring(self:GetOnState()))..
+              "\nIsWorking: "..(tostring(self:GetOnState()))..
         "\nEnable Para/Dia: "..(tostring(self:GetInteractOthers()))
   return Text
 end
 
-function ENT:Setup(strength , dampvel  , damprot  , itother  ,
-                   searchrad, length   , voff     , advise   , property )
+function ENT:Setup(strength , dampvel  , damprot  , itother  , searchrad,
+                   length   , voff     , advise   , property , toggle)
   if(self:GetClass() == magdipoleSentName) then
     self:SetSearchRadius(searchrad)
     self:SetStrength(strength)
@@ -307,6 +324,7 @@ function ENT:Setup(strength , dampvel  , damprot  , itother  ,
     self:SetInteractOthers(itother)
     self:SetPoleLength(length)
     self:SetPoleDirectionLocal(voff)
+    self:SetNumToggled(toggle)
     self:SetNWBool(magdipoleSentName.."_adv_en",advise)
     self:SetNWBool(magdipoleSentName.."_pro_en",property)
     if(property) then
