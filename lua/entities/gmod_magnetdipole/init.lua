@@ -19,7 +19,7 @@ include('shared.lua')
 
 -- Pretty much this is needed for properly calculate the force by the book
 -- I am just putting this here to avoid doing it in real-time
-local magdipoleForceMargin     = 1000          -- Scale the real force to expected in source
+local magdipoleForceMargin     = 100           -- Scale the real force to expected in source
 local magdipoleDenominator     = (4 * math.pi) -- Used in the real force calculating formula
 local magdipoleGetPermeability = magdipoleGetPermeability
 local magdipoleGetMaterialGain = magdipoleGetMaterialGain
@@ -124,7 +124,7 @@ function ENT:Think()
     wPoleDirection = self:WireRead("vPoleDirection")
   end
   -- If on by wire do not turn off by numpad...
-  local On = ((wPowerOn ~= nil) and (wPowerOn ~= 0) or (self:GetOnState()))
+  local On = (wPowerOn and (wPowerOn ~= 0) or (self:GetOnState()))
   -- Assert parameters Wire/Numpad
   if(wDampVel   and wDampVel   > 0) then self:SetDampVel(wDampVel)   end
   if(wDampRot   and wDampRot   > 0) then self:SetDampRot(wDampRot)   end
