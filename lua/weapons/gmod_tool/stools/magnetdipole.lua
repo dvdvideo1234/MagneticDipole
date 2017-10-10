@@ -38,10 +38,10 @@ TOOL.ClientConVar =
   [ "advise" ]    = "1"   ,      -- Advisor for tool trace state and pole location
   [ "toggle" ]    = "1"   ,      -- Toggle numpad enabled key ( def. true )
   [ "model" ]     = gsNullModel, -- models/props_c17/oildrum001.mdl
-  [ "offx" ]      = "0"   ,
-  [ "offy" ]      = "0"   ,
-  [ "offz" ]      = "0"   ,
-  [ "key" ]       = "45"
+  [ "offx" ]      = "0"   ,      -- Offset direction local X
+  [ "offy" ]      = "0"   ,      -- Offset direction local Y
+  [ "offz" ]      = "0"   ,      -- Offset direction local Z
+  [ "key" ]       = "45"         -- Power on key ascii
 }
 
 if CLIENT then
