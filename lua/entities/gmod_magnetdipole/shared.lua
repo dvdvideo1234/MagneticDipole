@@ -298,20 +298,20 @@ function ENT:SetNumToggled(bTog)
 end
 
 function ENT:GetMagnetOverlayText()
-  local PoleDir = self:GetPoleDirectionLocal()
-  local Text =                 (tostring(self))..
-               "\nStrength: "..(magdipoleRoundValue(self:GetStrength(),0.01) or "N/A")..
-               "\nDamping: {"..(magdipoleRoundValue(self:GetDampVel(),0.01) or "N/A")..", "
-                             ..(magdipoleRoundValue(self:GetDampRot(),0.01) or "N/A").."}"..
-                 "\nLength: "..(magdipoleRoundValue(self:GetPoleLength(),0.01) or "N/A")..
-                 "\nRadius: "..(magdipoleRoundValue(self:GetSearchRadius(),0.01) or "N/A")..
-               "\nPoledir: {"..(magdipoleRoundValue(PoleDir.x, 0.001) or "N")..", "
-                             ..(magdipoleRoundValue(PoleDir.y, 0.001) or "N")..", "
-                             ..(magdipoleRoundValue(PoleDir.z, 0.001) or "N").."}"..
-             "\nEnts found: "..(tostring(self:GetDiscoveryCount()))..
-              "\nIsWorking: "..(tostring(self:GetOnState()))..
-        "\nEnable Para/Dia: "..(tostring(self:GetInteractOthers()))
-  return Text
+  local vDir = self:GetPoleDirectionLocal()
+  local sTxt = (tostring(self))..
+         "\nStrength: "..(magdipoleRoundValue(self:GetStrength(),0.01) or "N/A")..
+         "\nDamping: {"..(magdipoleRoundValue(self:GetDampVel(),0.01) or "N/A")..", "
+                       ..(magdipoleRoundValue(self:GetDampRot(),0.01) or "N/A").."}"..
+           "\nLength: "..(magdipoleRoundValue(self:GetPoleLength(),0.01) or "N/A")..
+           "\nRadius: "..(magdipoleRoundValue(self:GetSearchRadius(),0.01) or "N/A")..
+         "\nPoledir: {"..(magdipoleRoundValue(vDir.x, 0.001) or "N")..", "
+                       ..(magdipoleRoundValue(vDir.y, 0.001) or "N")..", "
+                       ..(magdipoleRoundValue(vDir.z, 0.001) or "N").."}"..
+       "\nEnts found: "..(tostring(self:GetDiscoveryCount()))..
+        "\nIsWorking: "..(tostring(self:GetOnState()))..
+  "\nEnable Para/Dia: "..(tostring(self:GetInteractOthers()))
+  return sTxt
 end
 
 function ENT:Setup(strength , dampvel  , damprot  , itother  , searchrad,

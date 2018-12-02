@@ -162,7 +162,8 @@ function ENT:Think()
             local theyPhys = they:GetPhysicsObject()
             if(theyPhys and theyPhys:IsValid()) then
               local theyClass = they:GetClass()
-              if(theyClass == magdipoleSentName) then
+              local theyGhost = they[magdipoleSentName]
+              if(theyClass == magdipoleSentName and not theyGhost) then
                 local theyCen = they:GetMagnetCenter()
                 local theySou = they:GetSouthPosOrigin(theyCen)
                 local theyNor = they:GetNorthPosOrigin(theyCen)
@@ -178,7 +179,7 @@ function ENT:Think()
                 --- Repel   Mine North [ MineN - OtherN ]
                 self:MagnitudePole(vForceN, mineNor, theyNor,  nGain)
                 self:AddDiscovery(they)
-              elseif(inteOth and theyClass == "prop_physics") then
+              elseif(inteOth and theyClass == "prop_physics" and not theyGhost) then
                 local nGain = magdipoleGetPermeability()[2]
                       nGain = nGain * (self:GetStrength() * magdipoleGetMaterialGain(they)) -- Magnetised prop
                       nGain = (nGain * magdipoleForceMargin * self:GetStrength()) / magdipoleDenominator

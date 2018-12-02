@@ -282,9 +282,7 @@ function TOOL:LeftClick(tr)
                                    length   , voff     , advise   , property , toggle )
     if(seMag) then
       local vBBMin = seMag:OBBMins()
-      local vPos = Vector(tr.HitPos[1],
-                          tr.HitPos[2],
-                          tr.HitPos[3] - (tr.HitNormal[3] * vBBMin[3]))
+      local vPos = Vector(tr.HitPos[1], tr.HitPos[2], tr.HitPos[3] - (tr.HitNormal[3] * vBBMin[3]))
       local vBBCenterOff = vPos - seMag:GetMagnetCenter()
             vBBCenterOff[3] = 0
       vPos:Add(vBBCenterOff)
@@ -402,20 +400,19 @@ end
 local test = true
 function TOOL:Think()
   local model = self:GetModel()
-  if(util.IsValidModel(model)) then
-    local ply = self:GetOwner()
-    local gho = self.GhostEntity
+  if(util.IsValidModel(model)) then local ply = self:GetOwner()
     if(self:GetEnGhost()) then
-      if (not (gho and gho:IsValid() and gho:GetModel() == model and model ~= gsNullModel)) then
-        self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO); gho = self.GhostEntity
-      end; self:UpdateGhost(gho, ply)
-    else
-      self:ReleaseGhostEntity()
-      if(gho and gho:IsValid()) then gho:Remove() end
+      if (not (self.GhostEntity and
+               self.GhostEntity:IsValid() and
+               self.GhostEntity:GetModel() == model and model ~= gsNullModel)) then
+        self:MakeGhostEntity(model,VEC_ZERO,ANG_ZERO)
+      end; self:UpdateGhost(self.GhostEntity, ply)
+      if(self.GhostEntity and self.GhostEntity:IsValid()) then
+        self.GhostEntity[gsFileClass] = true end
+    else self:ReleaseGhostEntity()
+      if(self.GhostEntity and self.GhostEntity:IsValid()) then self.GhostEntity:Remove() end
     end
-  else
-    self:ReleaseGhostEntity()
-  end
+  else self:ReleaseGhostEntity() end
 end
 
 
@@ -427,20 +424,14 @@ function SetModelColor(trModel,sModel)
       else
         if(sModel == gsNullModel) then
           surface.SetDrawColor(gtPalette.C)
-        else
-          surface.SetDrawColor(gtPalette.Y)
-        end
+        else surface.SetDrawColor(gtPalette.Y) end
       end
     else
       if(sModel == gsNullModel) then
         surface.SetDrawColor(gtPalette.C)
-      else
-        surface.SetDrawColor(gtPalette.G)
-      end
+      else surface.SetDrawColor(gtPalette.G) end
     end
-  else
-    surface.SetDrawColor(gtPalette.C)
-  end
+  else surface.SetDrawColor(gtPalette.C) end
 end
 
 function TOOL:DrawHUD()
