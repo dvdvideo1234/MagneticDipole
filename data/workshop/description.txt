@@ -1,0 +1,50 @@
+[h1] Description [/h1]
+This addon can give you the ability to have have an entity that
+simulates real magnets with real north and south poles not like
+the old magnetize tool. The simulation is calculated according to
+[url=http://en.wikipedia.org/wiki/Force_between_magnets] [b] Gilbert's model [/b] [/url] when both poles are small enough to be represented
+as single points in space where the fore equation is used from the
+classical mechanics to improve overall [b] TOOL:Think() [/b] hook performance.
+
+[h1] Feature List [/h1]
+[list]
+ [*] Supports and controlled by wire
+ [*] Customizable poles location
+ [*] Works with advanced duplicator 1 and 2
+ [*] Dedicated numpad control
+ [*] When connected wire inputs override internal values
+ [*] New and recent code-base in tone with GMOD 13
+ [*] Ability to change the model on the fly ( filtered )
+ [*] Ability to replace a trace entity with itself
+ [*] Ability to update a dipole with left click entity class
+ [*] Logging is available ( turn off by default )
+ [*] Maximum value control setup tweaks are available
+ [*] Adjustable search radius for magnets and ferromagnets
+[/list]
+
+Q: It won't spawn dude, help !
+A: Em, Use right click to select a model filter
+
+Q: What are those OBB Offsets?
+A: Local vector defining the positions of the poles relative to the OBB center.
+
+Q: I get the other things, but what is that search radius all about?
+A: When this thing is greater than 0, you have active magnet, which means that it is searching for other SENTs of the same class and calculating some forces on its poles, set this to 0 to get a passive ( non-searching magnet dipole).
+Beware, that the active dipoles will still find the passive AND active ones IF THEY ARE WITHIN their search radius, dependant by their own data.
+
+For detailed manual, please refer to readme.md
+
+Readme: https://github.com/dvdvideo1234/MagneticDipole/blob/master/readme.md
+
+Git repository: https://github.com/dvdvideo1234/MagneticDipole
+
+Report errors to: https://github.com/dvdvideo1234/MagneticDipole/issues
+
+Reuploading and source stealing will not be tolerated !
+Please respect the Original author for creating this addon and
+me for fixing it to Gmod 13 version coding style !
+Selling it is also out of option, as the open source suggests !
+
+If you want to support me and you like what I do:
+
+paypal.me/DeyanVasilev
