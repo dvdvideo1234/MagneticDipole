@@ -6,7 +6,7 @@
 
 ### IF YOU HAPPEN TO FIND REUPLOADS WITH DIFFERENT ORIGIN REPORT THEM TO ME IMMIDEATELY !!!
 
-![MagnetDipole](https://raw.githubusercontent.com/dvdvideo1234/MagneticDipole/master/data/pictures/secreenshot.jpg)
+![MagnetDipole][ref-screen]
 
 ### Description
 
@@ -46,6 +46,7 @@ for other [`entities`][ref-ent] of the same [`class`][ref-entclass] and calculat
       3. ![][ref-ye] `Trace is world`
       4. ![][ref-cy] `Trace is nether of above`
 
+[ref-screen]: https://raw.githubusercontent.com/dvdvideo1234/MagneticDipole/master/data/magnetdipole/tools/pictures/secreenshot.jpg
 [ref-gilbert]: http://en.wikipedia.org/wiki/Force_between_magnets
 [ref-ent]: https://developer.valvesoftware.com/wiki/Entity
 [ref-entclass]: https://wiki.facepunch.com/gmod/Entity:GetClass
