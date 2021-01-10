@@ -15,6 +15,7 @@ set gmadName=MagneticDipole
 set gmadCommits=https://github.com/dvdvideo1234/%gmadName%/commit/
 set gmadPathGIT=D:\Git\bin
 set gmadBinPath=F:\Games\Steam\steamapps\common\GarrysMod\bin
+set gmadADTools=%gmadRevPath%data\magnetdipole\tools
 set "gmadTime=%date% %time%"
 set gmadID=363567027
 set gmadDirs=(lua)
