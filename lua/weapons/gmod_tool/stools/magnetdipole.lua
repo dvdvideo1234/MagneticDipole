@@ -24,24 +24,24 @@ local gtPalette = {
 
 TOOL.ClientConVar =
 {
-  [ "permeabil" ] = "23"  ,      -- Environment permeability ( def. Air )
-  [ "searchrad" ] = "0"   ,      -- Magnet search radius ( def. Non-searching )
-  [ "poledepth" ] = "10"  ,      -- Default pole depth is 10% of the length
-  [ "strength" ]  = "2000",      -- Magnet strength to repel and attract in [Am]
-  [ "property" ]  = "0"   ,      -- Enable debug balloon properties
-  [ "dampvel" ]   = "100" ,      -- Linear velocity damping
-  [ "damprot" ]   = "100" ,      -- Angular velocity damping
-  [ "enghost" ]   = "1"   ,      -- Check to enable ghosting
-  [ "itother" ]   = "0"   ,      -- Used for enable (para/dia)magnetism
-  [ "crossiz" ]   = "10"  ,      -- Size of the aim cross
-  [ "length" ]    = "20"  ,      -- Distance from the center to one of the poles
-  [ "advise" ]    = "1"   ,      -- Advisor for tool trace state and pole location
-  [ "toggle" ]    = "1"   ,      -- Toggle numpad enabled key ( def. true )
+  [ "permeabil" ] = 23  ,      -- Environment permeability ( def. Air )
+  [ "searchrad" ] = 0   ,      -- Magnet search radius ( def. Non-searching )
+  [ "poledepth" ] = 10  ,      -- Default pole depth is 10% of the length
+  [ "strength" ]  = 2000,      -- Magnet strength to repel and attract in [Am]
+  [ "property" ]  = 0   ,      -- Enable debug balloon properties
+  [ "dampvel" ]   = 100 ,      -- Linear velocity damping
+  [ "damprot" ]   = 100 ,      -- Angular velocity damping
+  [ "enghost" ]   = 1   ,      -- Check to enable ghosting
+  [ "itother" ]   = 0   ,      -- Used for enable (para/dia)magnetism
+  [ "crossiz" ]   = 10  ,      -- Size of the aim cross
+  [ "length" ]    = 20  ,      -- Distance from the center to one of the poles
+  [ "advise" ]    = 1   ,      -- Advisor for tool trace state and pole location
+  [ "toggle" ]    = 1   ,      -- Toggle numpad enabled key ( def. true )
   [ "model" ]     = gsNullModel, -- models/props_c17/oildrum001.mdl
-  [ "offx" ]      = "0"   ,      -- Offset direction local X
-  [ "offy" ]      = "0"   ,      -- Offset direction local Y
-  [ "offz" ]      = "0"   ,      -- Offset direction local Z
-  [ "key" ]       = "45"         -- Power on key ascii
+  [ "offx" ]      = 0   ,      -- Offset direction local X
+  [ "offy" ]      = 0   ,      -- Offset direction local Y
+  [ "offz" ]      = 0   ,      -- Offset direction local Z
+  [ "key" ]       = 45         -- Power on key ascii
 }
 
 if CLIENT then
@@ -122,11 +122,11 @@ if SERVER then
       -- /gmod_magnetdipole/shared.lua -> magdipoleConvertModel(sModel)
       local seMag = ents.Create(gsFileClass)
       if(seMag and seMag:IsValid()) then
-        seMag:SetCollisionGroup(COLLISION_GROUP_NONE);
-        seMag:SetSolid(SOLID_VPHYSICS);
+        seMag:SetCollisionGroup(COLLISION_GROUP_NONE)
+        seMag:SetSolid(SOLID_VPHYSICS)
         seMag:SetMoveType(MOVETYPE_VPHYSICS)
         seMag:SetModel(model)
-        seMag:SetNotSolid( false );
+        seMag:SetNotSolid(false)
         seMag:SetPos(pos)
         seMag:SetAngles(ang)
         seMag:Spawn()
@@ -143,9 +143,9 @@ if SERVER then
         seMag:PhysWake()
         local phPhys = seMag:GetPhysicsObject()
         if(phPhys and phPhys:IsValid()) then
-          local Table = { mnNumKey = key,    msModel     = model,
+          local tInfo = { mnNumKey = key,    msModel     = model,
                           mbAdvise = advise, mbProperty  = property }
-          table.Merge(seMag:GetTable(),Table)
+          table.Merge(seMag:GetTable(), tInfo)
           return seMag
         end; seMag:Remove()
         ErrorNoHalt("MAGNETDIPOLE: MakeMagnetDipole: Physics object invalid!")
@@ -219,19 +219,19 @@ function TOOL:GetEnGhost()
   return ((self:GetClientNumber("enghost") ~= 0) or false)
 end
 
-function TOOL:GetPoleLength(oTrace, nDepth)
-  local Len = (math.Clamp(self:GetClientNumber("length") or 0,0,gnMaxPoleLen))
-  if(Len == 0) then
+function TOOL:GetPoleLength(oTrace)
+  local len = (math.Clamp(self:GetClientNumber("length") or 0,0,gnMaxPoleLen))
+  if(len == 0) then
     local trEnt = oTrace.Entity
     if(trEnt and trEnt:IsValid()) then
-      local Depth = tonumber(nDepth) or 0 -- Prercent 0 to 50
-      if(Depth >= 0) then
-        local Centre = trEnt:LocalToWorld(trEnt:OBBCenter())
-        Len = (oTrace.HitPos - Centre):Length()
-        Len = Len - ((Len * Depth) / 100)
+      local poledepth = self:GetPoleDepth()
+      if(poledepth >= 0) then -- Prercent 0 to 90
+        local cen = trEnt:LocalToWorld(trEnt:OBBCenter())
+        len = (oTrace.HitPos - cen):Dot(oTrace.HitNormal)
+        len = len - ((len * poledepth) / 100)
       end
     end
-  else Len = math.abs(Len) end; return Len
+  else len = math.abs(len) end; return len
 end
 
 function TOOL:GetOffsets(oTrace, nLen)
@@ -257,8 +257,7 @@ function TOOL:LeftClick(tr)
   if(not tr) then return false end
   local trEnt     = magdipoleGetTracePhys(tr)
   if(not (tr.HitWorld or trEnt)) then return false end
-  local poledepth = self:GetPoleDepth()
-  local length    = self:GetPoleLength(tr,poledepth)
+  local length    = self:GetPoleLength(tr)
   if(length <= 0) then return false end
   local voff = self:GetOffsets(tr,length)
   if(voff:Length() < magdipoleGetEpsilonZero()) then return false end
@@ -356,13 +355,20 @@ function TOOL:RightClick(tr)
       ply:ConCommand(gsFilePrefix.."offy      "..poledir.y.." \n")
       ply:ConCommand(gsFilePrefix.."offz      "..poledir.z.." \n")
       PrintNotify(ply,"Settings copied !","GENERIC")
-      return true
-    elseif(trClass == "prop_physics") then
-      ply:ConCommand(gsFilePrefix.."model "..trModel.." \n")
-      PrintNotify(ply,"Model: "..(trModel):GetFileFromFilename().." !","GENERIC")
-      return true
+    else
+      local angle = trEnt:GetAngles()
+      local length = self:GetPoleLength(tr)
+      local px = angle:Forward():Dot(tr.HitNormal)
+      local py = -angle:Right():Dot(tr.HitNormal)
+      local pz = angle:Up():Dot(tr.HitNormal)
+      ply:ConCommand(gsFilePrefix.."model  "..trModel.." \n")
+      ply:ConCommand(gsFilePrefix.."length "..length.." \n")
+      ply:ConCommand(gsFilePrefix.."offx   "..px.." \n")
+      ply:ConCommand(gsFilePrefix.."offy   "..py.." \n")
+      ply:ConCommand(gsFilePrefix.."offz   "..pz.." \n")
+      PrintNotify(ply,"Model: "..trModel:GetFileFromFilename().." !","GENERIC")
     end
-    return false
+    return true
   elseif(tr.HitWorld) then
     ply:ConCommand(gsFilePrefix.."model "..gsNullModel.." \n")
     PrintNotify(ply,"Model cleared !","GENERIC")
@@ -464,8 +470,10 @@ function TOOL:DrawHUD()
       local N = wPos:ToScreen()
       local NLen = (tr.HitPos - wPos):Length() / trLen
       local RadScale = math.Clamp(750 / (tr.HitPos - ply:GetPos()):Length(),1,100)
-      surface.SetDrawColor(gtPalette.Y)
-      surface.DrawLine(S.x, S.y, N.x, N.y)
+      if(S.visible and N.visible) then
+        surface.SetDrawColor(gtPalette.Y)
+        surface.DrawLine(S.x, S.y, N.x, N.y)
+      end
       surface.DrawCircle(S.x, S.y, RadScale, gtPalette.B)
       surface.DrawCircle(N.x, N.y, RadScale, gtPalette.R)
       surface.DrawCircle(x,y,crossiz,Color(SLen*255,0,NLen*255,255))
@@ -488,6 +496,7 @@ function TOOL:DrawHUD()
   surface.DrawLine(x + crosszd, y - crosszd,  x - crosszd, y + crosszd)
 end
 
+-- Enter `spawnmenu_reload` in the console to reload the panel
 local gtConVarList = TOOL:BuildConVarList()
 function TOOL.BuildCPanel(CPanel)
   -- https://wiki.garrysmod.com/page/Category:DForm
@@ -497,11 +506,11 @@ function TOOL.BuildCPanel(CPanel)
           CPanel:SetName(language.GetPhrase("tool."..gsFileName..".name"))
   pItem = CPanel:Help   (language.GetPhrase("tool."..gsFileName..".desc"))
 
-  pItem = CPanel:AddControl( "ComboBox",{
-            MenuButton = 1,
-            Folder     = gsFileName,
-            Options    = {["#Default"] = gtConVarList},
-            CVars      = table.GetKeys(gtConVarList)})
+  pItem = vgui.Create("ControlPresets", CPanel)
+  pItem:SetPreset(gsFileName)
+  pItem:AddOption("Default", gtConVarList)
+  for key, val in pairs(table.GetKeys(gtConVarList)) do pItem:AddConVar(val) end
+  CPanel:AddItem(pItem)
 
   pItem = CPanel:ComboBox(language.GetPhrase( "tool."..gsFileName..".permeabil_con"), "permeabil")
   pItem:SetTooltip       (language.GetPhrase( "tool."..gsFileName..".permeabil"))
@@ -537,10 +546,14 @@ function TOOL.BuildCPanel(CPanel)
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".offz"))
   pItem = CPanel:NumSlider (language.GetPhrase("tool."..gsFileName..".crossiz_con"), gsFilePrefix.."crossiz", 0, gnMaxCrossSiz, 3)
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".crossiz"))
-  CPanel:AddControl( "Numpad", {
-            Label      = language.GetPhrase("tool."..gsFileName..".key_con"),
-            Command    = gsFilePrefix.."key",
-            ButtonSize = 10 }):SetTooltip(language.GetPhrase("tool."..gsFileName..".key"))
+
+  pItem = vgui.Create("CtrlNumPad", CPanel)
+  pItem:SetConVar1(gsFilePrefix.."key")
+  pItem:SetLabel1(language.GetPhrase("tool."..gsFileName..".key_con"))
+  pItem.NumPad1:SetTooltip(language.GetPhrase("tool."..gsFileName..".key"))
+  pItem:SetTall(25)
+  CPanel:AddPanel(pItem)
+
   pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".itother_con"), gsFilePrefix.."itother")
            pItem:SetTooltip(language.GetPhrase("tool."..gsFileName..".itother"))
   pItem = CPanel:CheckBox  (language.GetPhrase("tool."..gsFileName..".enghost_con"), gsFilePrefix.."enghost")
